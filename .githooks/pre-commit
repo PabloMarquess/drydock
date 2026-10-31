@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+pnpm exec biome check --staged --error-on-warnings --no-errors-on-unmatched
+sh scripts/gitleaks.sh --staged
+
+staged=$(git diff --cached --name-only)
+if printf '%s\n' "$staged" | grep -qE '^(\.claude-plugin|plugins)/'; then pnpm run validate; fi
+if printf '%s\n' "$staged" | grep -qE '^\.github/'; then pnpm run workflows; fi

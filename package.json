@@ -1,0 +1,29 @@
+{
+  "name": "drydock",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "2.1.310",
+    "@biomejs/biome": "2.6.3",
+    "typescript": "7.0.2"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "lint": "biome check --error-on-warnings .",
+    "format": "biome check --write .",
+    "secrets": "sh scripts/gitleaks.sh",
+    "validate": "node scripts/plugins.mjs",
+    "workflows": "sh scripts/workflows.sh",
+    "check": "biome ci --error-on-warnings . && pnpm run secrets && pnpm run validate && pnpm run workflows"
+  }
+}

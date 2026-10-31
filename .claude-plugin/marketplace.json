@@ -1,0 +1,11 @@
+{
+  "name": "drydock",
+  "owner": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "metadata": {
+    "description": "Claude Code mods."
+  },
+  "plugins": []
+}

@@ -1,0 +1,4 @@
+minimumReleaseAge: 10080
+savePrefix: ""
+allowBuilds:
+  "@anthropic-ai/claude-code": true
