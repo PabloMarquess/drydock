@@ -37,5 +37,17 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["plugins/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useValidAriaRole": "off"
+          }
+        }
+      }
+    }
+  ]
 }

@@ -7,5 +7,13 @@
   "metadata": {
     "description": "Claude Code mods."
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "gauge",
+      "source": "./plugins/gauge",
+      "description": "Band above the prompt: turn, output speed, turn and session cost, prompt cache countdown and context fill.",
+      "version": "0.1.0",
+      "category": "mod"
+    }
+  ]
 }

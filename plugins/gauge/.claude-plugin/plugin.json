@@ -1,0 +1,27 @@
+{
+  "name": "gauge",
+  "version": "0.1.0",
+  "description": "Band above the prompt: turn, output speed, turn and session cost, prompt cache countdown and context fill.",
+  "author": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/gauge",
+  "repository": "https://github.com/PabloMarquess/drydock",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "cacheTtlMinutes": {
+      "type": "number",
+      "title": "Prompt cache lifetime (minutes)",
+      "description": "How long the prompt cache lives after the last request that read or wrote it. 60 on a Claude subscription, 5 on the API by default.",
+      "default": 60
+    },
+    "warnMinutes": {
+      "type": "number",
+      "title": "Warn before the cache expires (minutes)",
+      "description": "A toast and a notification when this many minutes are left, at most half the cache lifetime. 0 turns the warning off.",
+      "default": 5
+    }
+  }
+}

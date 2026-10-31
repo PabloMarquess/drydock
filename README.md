@@ -2,6 +2,12 @@
 
 Mods for [Claude Code](https://claude.com/claude-code).
 
+## Mods
+
+| Mod                    | What it does                                                                 |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| [gauge](plugins/gauge) | Band above the prompt: turn, speed, cost, prompt cache countdown and context |
+
 ## Install
 
 ```
@@ -25,6 +31,13 @@ Load a mod from this folder in every session, including the desktop app, through
   }
 }
 ```
+
+## Adding a mod
+
+1. Create `plugins/<mod>/` with `.claude-plugin/plugin.json`, `hooks/`, `types/` and `tests/`.
+2. List it in `.claude-plugin/marketplace.json` and in the table above.
+3. Load it locally through `CLAUDE_CODE_PLUGIN_DIRS` and try it in a session.
+4. Commit as `feat(<mod>): ...` and push to `main`.
 
 ## Checks
 
