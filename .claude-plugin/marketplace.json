@@ -14,6 +14,13 @@
       "description": "Band above the prompt: turn, output speed, turn and session cost, prompt cache countdown and context fill.",
       "version": "0.1.0",
       "category": "mod"
+    },
+    {
+      "name": "deck",
+      "source": "./plugins/deck",
+      "description": "Pane with the session's subagents and workflow agents: model, requests, tokens, context, estimated cost and time.",
+      "version": "0.1.0",
+      "category": "mod"
     }
   ]
 }

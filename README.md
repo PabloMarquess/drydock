@@ -4,9 +4,10 @@ Mods for [Claude Code](https://claude.com/claude-code).
 
 ## Mods
 
-| Mod                    | What it does                                                                 |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| [gauge](plugins/gauge) | Band above the prompt: turn, speed, cost, prompt cache countdown and context |
+| Mod                          | What it does                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                           |
+| [deck](plugins/deck)         | Pane with the session's subagents and workflow agents: model, tokens, context, estimated cost and time |
 
 ## Install
 

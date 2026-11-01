@@ -1,6 +1,7 @@
 # Notice
 
-`plugins/gauge` is a new implementation inspired by `session-band` from
+`plugins/gauge` and `plugins/deck` are new implementations inspired by `session-band` and
+`savvy-progress` from
 [claude-kit](https://github.com/JohnnyVizz/claude-kit) (commit `c871c15`), used under the MIT License:
 
 ```

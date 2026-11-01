@@ -1,0 +1,28 @@
+{
+  "name": "deck",
+  "version": "0.1.0",
+  "description": "Pane with the session's subagents and workflow agents: model, requests, tokens, context, estimated cost and time.",
+  "author": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/deck",
+  "repository": "https://github.com/PabloMarquess/drydock",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "autoOpen": {
+      "type": "boolean",
+      "title": "Open the deck when the first agent starts",
+      "description": "Opens the pane once per session, when the first subagent or workflow agent starts. /deck opens it any time.",
+      "default": true
+    },
+    "subagentCacheTtl": {
+      "type": "string",
+      "title": "Subagent prompt cache lifetime",
+      "description": "Prices cache writes at 1.25x input for 5m (the Claude Code default for subagents) or 2x for 1h.",
+      "default": "5m",
+      "options": ["5m", "1h"]
+    }
+  }
+}
