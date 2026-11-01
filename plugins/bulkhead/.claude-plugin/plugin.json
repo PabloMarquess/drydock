@@ -1,0 +1,39 @@
+{
+  "name": "bulkhead",
+  "version": "0.1.0",
+  "description": "Guard for dangerous shell commands: blocks the catastrophic and stops the risky for a person to run or confirm.",
+  "author": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/bulkhead",
+  "repository": "https://github.com/PabloMarquess/drydock",
+  "license": "MIT",
+  "userConfig": {
+    "confirmStyle": {
+      "type": "string",
+      "title": "Risky commands",
+      "description": "block refuses them and asks the user to run them; ask opens the permission dialog, which auto mode leaves to its classifier.",
+      "default": "block",
+      "options": ["block", "ask"]
+    },
+    "extraBlock": {
+      "type": "string",
+      "title": "Extra block rules",
+      "description": "Regular expressions, one per line, matched against each part of a command. A match is always refused.",
+      "default": ""
+    },
+    "extraConfirm": {
+      "type": "string",
+      "title": "Extra confirm rules",
+      "description": "Regular expressions, one per line. A match asks for permission, or is refused in modes that ask nobody.",
+      "default": ""
+    },
+    "disabledRules": {
+      "type": "string",
+      "title": "Disabled rules",
+      "description": "Built-in rule ids to turn off, separated by spaces or commas (for example git-discard).",
+      "default": ""
+    }
+  }
+}

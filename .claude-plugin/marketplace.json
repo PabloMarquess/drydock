@@ -21,6 +21,13 @@
       "description": "Pane with the session's subagents and workflow agents: model, requests, tokens, context, estimated cost and time.",
       "version": "0.1.0",
       "category": "mod"
+    },
+    {
+      "name": "bulkhead",
+      "source": "./plugins/bulkhead",
+      "description": "Guard for dangerous shell commands: blocks the catastrophic and stops the risky for a person to run or confirm.",
+      "version": "0.1.0",
+      "category": "mod"
     }
   ]
 }
