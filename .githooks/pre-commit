@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+partial=$({ git diff --cached --name-only --diff-filter=ACMR; echo '--'; git diff --name-only; } | awk '/^--$/ { s = 1; next } !s { a[$0] = 1; next } a[$0]')
+if [ -n "$partial" ]; then
+  echo "pre-commit: these files have unstaged changes, so the checks would read a different version than the commit:" >&2
+  printf '  %s\n' $partial >&2
+  echo "Stage them fully, or run 'git stash push --keep-index' to commit only what is staged." >&2
+  exit 1
+fi
+
 pnpm exec biome check --staged --error-on-warnings --no-errors-on-unmatched
 sh scripts/gitleaks.sh --staged
 
