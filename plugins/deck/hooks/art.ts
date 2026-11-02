@@ -1,9 +1,9 @@
-import type { AgentStatus } from '../types'
+import type { AgentStatus, Costume } from '../types'
 
 // Drawings ported from claude-kit's savvy-progress (commit c871c15, MIT): Pixel Clawd and its
 // costumes, the pane's rows, tiles and dotted grid, and the band's dithered bar. Pure strings in, SVG out.
 
-export type Costume = 'fable' | 'heavy' | 'careful' | 'medium' | 'light' | 'explore' | 'other'
+export type { Costume }
 
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif"
 

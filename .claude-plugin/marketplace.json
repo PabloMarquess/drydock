@@ -19,7 +19,7 @@
       "name": "deck",
       "source": "./plugins/deck",
       "description": "A row per subagent and workflow agent, Pixel Clawd in a costume for its model, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed and memory), and a dithered progress band above the prompt while they run.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "mod"
     },
     {

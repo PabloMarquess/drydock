@@ -65,7 +65,7 @@ A finished agent makes no more calls, so its row stops warning; `/deck details` 
 | Haiku model           | racer, helmet          | `#1D9E75` | runs at double pace, flag flutters |
 | any other model       | the plain crab         | `#888780` | walks                              |
 
-The type decides first, then the model. The colour paints the model's name on the row, the costume's accent and the live dot. A running crab walks (the astronaut floats), a finished one stands still, and a failed one stands still, dimmed, beside a red ✗. Motion is CSS only, and stops under `prefers-reduced-motion`. The terminal draws `▣` in the costume's colour, dimmed for a failed agent.
+The type decides first, then the model. `/deck costume` and the `costumes` option change that: costumes are `astronaut`, `detective`, `engineer`, `chef`, `racer`, `pirate` and `crab`; targets are `all`, the agent types `explore` and `plan`, and the model families `fable`, `opus`, `sonnet` and `haiku`. The colour paints the model's name on the row, the costume's accent and the live dot. A running crab walks (the astronaut floats), a finished one stands still, and a failed one stands still, dimmed, beside a red ✗. Motion is CSS only, and stops under `prefers-reduced-motion`. The terminal draws `▣` in the costume's colour, dimmed for a failed agent.
 
 ## The band
 
@@ -89,24 +89,27 @@ The deck spends no model tokens on its own: it adds no tool for the model and no
 
 ## Options
 
-| Option             | Default |                                                                          |
-| ------------------ | ------- | ------------------------------------------------------------------------ |
-| `autoOpen`         | true    | Open the pane once per session, when the first agent starts              |
-| `subagentCacheTtl` | 5m      | Prices cache writes at 1.25x input (5m, the subagent default) or 2x (1h) |
+| Option             | Default |                                                                                                             |
+| ------------------ | ------- | ----------------------------------------------------------------------------------------------------------- |
+| `autoOpen`         | true    | Open the pane once per session, when the first agent starts                                                 |
+| `subagentCacheTtl` | 5m      | Prices cache writes at 1.25x input (5m, the subagent default) or 2x (1h)                                    |
+| `costumes`         | (empty) | Costumes for every session: one for all agents (`astronaut`) or per target (`opus=astronaut, haiku=pirate`) |
 
 On a terminal narrower than 144 columns a pane the deck opens by itself waits until you open it: `/deck` says the pane is waiting, and the band's `Deck` or `/deck pane` shows it.
 
 ## Commands
 
-| Command         |                                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| `/deck`         | Status on one line: agents, cost, time, whether pane and band show; what the numbers mean as a notice |
-| `/deck on`      | Shows the pane and the band for this session                                                          |
-| `/deck off`     | Closes the pane, hides the band and keeps the pane from opening by itself, for this session           |
-| `/deck pane`    | Shows or hides the pane                                                                               |
-| `/deck band`    | Shows or hides the band for the session                                                               |
-| `/deck details` | Shows or hides the details: Cost and Time tiles in the header, and extra lines on every row           |
-| `/deck clear`   | Drops finished and failed agents, as does the pane's button                                           |
+| Command                              |                                                                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/deck`                              | Status on one line: agents, cost, time, whether pane and band show; what the numbers mean as a notice                                       |
+| `/deck on`                           | Shows the pane and the band for this session                                                                                                |
+| `/deck off`                          | Closes the pane, hides the band and keeps the pane from opening by itself, for this session                                                 |
+| `/deck pane`                         | Shows or hides the pane                                                                                                                     |
+| `/deck band`                         | Shows or hides the band for the session                                                                                                     |
+| `/deck details`                      | Shows or hides the details: Cost and Time tiles in the header, and extra lines on every row                                                 |
+| `/deck clear`                        | Drops finished and failed agents, as does the pane's button                                                                                 |
+| `/deck costume [<target>] <costume>` | Dresses the agents for this session: `/deck astronaut` dresses all of them, `/deck opus pirate` one target, `/deck costume reset` goes back |
+| `/deck help`                         | Lists these controls; `/deck costume help` lists the costumes and targets                                                                   |
 
 ## Credits
 

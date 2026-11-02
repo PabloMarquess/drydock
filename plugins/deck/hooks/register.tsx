@@ -1,7 +1,7 @@
 import type { EngineInterface, Register, RenderElement, Timer, TurnCompleteInput, TurnUsage } from 'claude-code'
 import { atom, read, update } from 'claude-code'
 
-import type { AgentRow, AgentStatus, Batch, BatchMember } from '../types'
+import type { AgentRow, AgentStatus, Batch, BatchMember, Wardrobe } from '../types'
 import {
   ACCENT,
   agentSvg,
@@ -12,7 +12,6 @@ import {
   barText,
   CLAY,
   colorOf,
-  costumeOf,
   ctxBar,
   gridSvg,
   gridTiles,
@@ -23,6 +22,7 @@ import {
   rowHeight,
   STATUS_GLYPH,
 } from './art'
+import { COSTUME_NAMES, costumeNamed, describeWardrobe, parseWardrobe, TARGETS, wear } from './costumes'
 import { costOf, modelName, promptTokens, windowOf } from './pricing'
 
 const PANE = 'deck'
@@ -33,7 +33,21 @@ const MAX_RUNS = 20
 const MAX_TEXT = 300
 const MAX_ID = 100
 const WARN_AT = 70
-const USAGE = 'Usage: /deck [on|off|pane|band|details|clear]'
+const USAGE = 'Usage: /deck [on|off|pane|band|details|clear|costume|help]. /deck help explains each.'
+const HELP = [
+  '/deck: status on one line.',
+  '/deck on | off: show or hide the pane and the band for this session.',
+  '/deck pane: show or hide the pane. /deck band: show or hide the band.',
+  '/deck details: add cost, time, requests, tokens processed and memory.',
+  '/deck clear: drop finished and failed agents.',
+  '/deck costume [<target>] <costume>: dress the agents for this session; /deck costume help lists them.',
+].join('\n')
+const COSTUME_HELP = [
+  `Costumes: ${COSTUME_NAMES.join(', ')}.`,
+  `Targets: ${TARGETS.join(', ')} (agent types explore and plan, model families fable, opus, sonnet and haiku).`,
+  '/deck costume astronaut dresses every agent; /deck costume opus pirate dresses one target; /deck costume reset goes back to the default.',
+  'The costumes option sets them for every session, e.g. "opus=astronaut, haiku=pirate".',
+].join('\n')
 
 const COST_NOTE =
   'Cost is an estimate at API list prices. Agent time is how long at least one listed agent was running: parallel agents count once, idle gaps not at all.'
@@ -50,6 +64,7 @@ const autoOpened = atom({ plugin: 'deck', key: 'autoOpened' } as const, false)
 const batch = atom({ plugin: 'deck', key: 'batch' } as const, EMPTY_BATCH)
 const isBandHidden = atom({ plugin: 'deck', key: 'isBandHidden' } as const, false)
 const isDetails = atom({ plugin: 'deck', key: 'isDetails' } as const, false)
+const wardrobe = atom({ plugin: 'deck', key: 'wardrobe' } as const, {})
 
 // Control characters, lone surrogates and U+FFFE/U+FFFF (which XML forbids, so the desktop's image of
 // the row would not draw), and the bidi overrides that could reorder what a row shows.
@@ -150,11 +165,11 @@ const isWarned = (a: AgentRow): boolean => isRunning(a) && memoryOf(a).pct >= WA
 
 type View = { id: string; art: RowArt; pct: number; alt: string }
 
-const viewOf = (a: AgentRow, at: number, withDetails: boolean): View => {
+const viewOf = (a: AgentRow, at: number, withDetails: boolean, dress: Wardrobe): View => {
   const { window, pct } = memoryOf(a)
   const art: RowArt = {
     title: a.description || a.type,
-    costume: costumeOf(a.type, a.model),
+    costume: wear(dress, a.type, a.model),
     status: a.status,
     model: modelName(a.model),
     meta: ` · ${duration(runTime(a, at))}`,
@@ -322,6 +337,7 @@ const statusOf = async ($: EngineInterface): Promise<{ text: string; notes: stri
 export const register: Register = (on, options) => {
   const writeMultiplier = options.subagentCacheTtl === '1h' ? 2 : 1.25
   const autoOpen = options.autoOpen !== false
+  const configured = parseWardrobe(options.costumes)
   let timer: Timer | undefined
 
   on('session.start', async ($, e, next) => {
@@ -332,7 +348,7 @@ export const register: Register = (on, options) => {
       name: 'deck',
       description:
         'Agents deck status; `on` and `off` show or hide pane and band for this session, `pane` the pane alone, `band` the band, `details` the extra numbers, `clear` drops finished agents',
-      argumentHint: '[on|off|pane|band|details|clear]',
+      argumentHint: '[on|off|pane|band|details|clear|costume|help]',
       immediate: true,
     })
     return result
@@ -375,6 +391,23 @@ export const register: Register = (on, options) => {
     if (arg === 'clear') {
       await clearFinished($)
       return { text: 'Finished and failed agents cleared.' }
+    }
+    if (arg === 'help') return { text: HELP }
+    const words = arg.split(/\s+/)
+    const dress = words[0] === 'costume' ? words.slice(1) : words
+    if (words[0] === 'costume' || dress.some((w) => costumeNamed(w))) {
+      if (dress.length === 0 || dress[0] === 'help') {
+        const now = { ...configured, ...(await read($, wardrobe)) }
+        return { text: `Wearing: ${describeWardrobe(now)}.\n${COSTUME_HELP}` }
+      }
+      if (dress.length === 1 && dress[0] === 'reset') {
+        await update($, wardrobe, () => ({}))
+        return { text: `Costumes back to ${describeWardrobe(configured)}.` }
+      }
+      const chosen = parseWardrobe(dress.join(' '))
+      if (Object.keys(chosen).length === 0) return { text: `Unknown costume or target. ${COSTUME_HELP}` }
+      await update($, wardrobe, (w) => ({ ...w, ...chosen }))
+      return { text: `Wearing: ${describeWardrobe({ ...configured, ...(await read($, wardrobe)) })}.` }
     }
     return { text: USAGE }
   })
@@ -444,7 +477,8 @@ export const register: Register = (on, options) => {
     // Every redraw sends every drawn row, and a running one changes each second: the oldest finished
     // rows past MAX_DRAWN wait behind a count.
     const ordered = [...running, ...finished]
-    const views = ordered.slice(0, MAX_DRAWN).map((a) => viewOf(a, at, withDetails))
+    const dress = { ...configured, ...(await read($, wardrobe)) }
+    const views = ordered.slice(0, MAX_DRAWN).map((a) => viewOf(a, at, withDetails, dress))
     const hidden = ordered.length - views.length
     const t = totalsOf(list, at)
     const summary = withDetails ? `${agentsText(t)} · Cost ${t.cost} · Time ${t.time}` : agentsText(t)

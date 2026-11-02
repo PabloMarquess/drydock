@@ -1,6 +1,6 @@
 {
   "name": "deck",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A row per subagent and workflow agent, Pixel Clawd in a costume for its model, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed and memory), and a dithered progress band above the prompt while they run.",
   "author": {
     "name": "Pablo Marques",
@@ -23,6 +23,12 @@
       "description": "Prices cache writes at 1.25x input for 5m (the Claude Code default for subagents) or 2x for 1h.",
       "default": "5m",
       "options": ["5m", "1h"]
+    },
+    "costumes": {
+      "type": "string",
+      "title": "Costumes",
+      "description": "A costume for every agent (astronaut) or per target (opus=astronaut, haiku=pirate). Costumes: astronaut, detective, engineer, chef, racer, pirate, crab. Targets: all, explore, plan, fable, opus, sonnet, haiku.",
+      "default": ""
     }
   }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+
+- `/deck costume` and the `costumes` option choose the costumes: one for every agent (`/deck astronaut`) or per agent type or model family (`/deck opus pirate`).
+- `/deck help` lists the controls, and `/deck costume help` the costumes and targets.
+
 ## 0.2.0
 
 ### Added

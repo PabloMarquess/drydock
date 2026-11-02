@@ -813,6 +813,71 @@ describe('/deck', () => {
 
   test('an unknown argument shows the usage', async ($, on) => {
     await start($, on)
-    expect(await deck($, 'nope')).toMatchObject({ text: 'Usage: /deck [on|off|pane|band|details|clear]' })
+    expect(await deck($, 'nope')).toMatchObject({
+      text: 'Usage: /deck [on|off|pane|band|details|clear|costume|help]. /deck help explains each.',
+    })
   })
+
+  test('help lists every control, and costume help lists costumes and targets', async ($, on) => {
+    await start($, on)
+    const help = ((await deck($, 'help')) as { text: string }).text
+    for (const word of ['/deck on | off', '/deck pane', '/deck details', '/deck clear', '/deck costume']) {
+      expect(help).toContain(word)
+    }
+    const costumes = ((await deck($, 'costume help')) as { text: string }).text
+    expect(costumes).toContain('Wearing: the default (by type, then model).')
+    expect(costumes).toContain('astronaut, detective, engineer, chef, racer, pirate, crab')
+    expect(costumes).toContain('explore, plan, fable, opus, sonnet, haiku')
+    expect(((await deck($, 'costume')) as { text: string }).text).toBe(costumes)
+  })
+
+  for (const surface of SURFACES) {
+    test(`${surface}: /deck astronaut dresses every agent, a target wins over all, reset goes back`, async ($, on) => {
+      const { ui } = await start($, on, surface)
+      await spawn($, 'scan')
+      await spawn($, 'plan', { subagentType: 'Plan' })
+      const look = async (key: string) =>
+        surface === 'terminal' ? ((await text(ui, key)) ?? '') : await source(ui, key)
+      expect(await look('a-scan')).toContain(surface === 'terminal' ? 'Opus' : 'c-explore')
+
+      expect(await deck($, 'Astronaut')).toMatchObject({ text: 'Wearing: all astronaut.' })
+      if (surface !== 'terminal') {
+        expect(await look('a-scan')).toContain('c-fable')
+        expect(await look('a-plan')).toContain('c-fable')
+      }
+      expect(await deck($, 'costume plan pirate')).toMatchObject({ text: 'Wearing: all astronaut, plan pirate.' })
+      if (surface !== 'terminal') {
+        expect(await look('a-plan')).toContain('c-explore')
+        expect(await look('a-scan')).toContain('c-fable')
+      }
+      expect(await deck($, 'costume reset')).toMatchObject({
+        text: 'Costumes back to the default (by type, then model).',
+      })
+      if (surface !== 'terminal') {
+        expect(await look('a-scan')).toContain('c-explore')
+        expect(await look('a-plan')).toContain('c-careful')
+      }
+    })
+  }
+
+  test('an unknown costume or target answers with the costume help', async ($, on) => {
+    await start($, on)
+    const reply = ((await deck($, 'costume opus wizard')) as { text: string }).text
+    expect(reply).toContain('Unknown costume or target.')
+    expect(reply).toContain('Costumes: astronaut')
+  })
+
+  test(
+    'the costumes option dresses every session; a session choice wins over it',
+    { options: { costumes: 'opus=racer' } },
+    async ($, on) => {
+      const { ui } = await start($, on, 'desktop')
+      await spawn($, 'one', { subagentType: 'general-purpose' })
+      expect(await source(ui, 'a-one')).toContain('c-light')
+      await deck($, 'opus chef')
+      expect(await source(ui, 'a-one')).toContain('c-medium')
+      expect(await deck($, 'costume reset')).toMatchObject({ text: 'Costumes back to opus racer.' })
+      expect(await source(ui, 'a-one')).toContain('c-light')
+    },
+  )
 })

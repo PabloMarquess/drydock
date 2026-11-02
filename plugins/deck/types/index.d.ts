@@ -21,6 +21,11 @@ export type AgentRow = {
   isPriced: boolean
 }
 
+export type Costume = 'fable' | 'heavy' | 'careful' | 'medium' | 'light' | 'explore' | 'other'
+
+/** Which costume each target wears: `all`, an agent type (`explore`, `plan`) or a model family. */
+export type Wardrobe = Record<string, Costume>
+
 /** A member keeps its status in the batch whether or not the deck still lists its row. */
 export type BatchMember = Pick<AgentRow, 'id' | 'status'>
 
@@ -44,6 +49,8 @@ declare module 'claude-code' {
       isBandHidden: boolean
       /** `/deck details`: the header adds cost and time, each row its type, workflow, cost, requests, tokens processed and memory. */
       isDetails: boolean
+      /** `/deck costume`: costumes chosen for the session, over the `costumes` option. */
+      wardrobe: Wardrobe
     }
   }
 }
