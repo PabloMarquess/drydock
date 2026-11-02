@@ -35,6 +35,13 @@
       "description": "Conversation theme for the desktop app: a tinted reply with an accent strip, a blue prompt, code cards and tool rows colored by kind.",
       "version": "0.1.1",
       "category": "mod"
+    },
+    {
+      "name": "logbook",
+      "source": "./plugins/logbook",
+      "description": "Where Claude got its context, turn by turn: skills, MCP calls, files, web, subagents and what each used, shell programs and instruction files, with estimated tokens. A dim line under each reply and a timeline pane; spends no model tokens.",
+      "version": "0.1.0",
+      "category": "mod"
     }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "name": "logbook",
+  "version": "0.1.0",
+  "description": "Where Claude got its context, turn by turn: skills, MCP calls, files, web, subagents and what each used, shell programs and instruction files, with estimated tokens. A dim line under each reply and a timeline pane; spends no model tokens.",
+  "author": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/logbook",
+  "repository": "https://github.com/PabloMarquess/drydock",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "summary": {
+      "type": "boolean",
+      "title": "Show a line under each reply",
+      "description": "After each turn, one dim line with the sources it used and the tokens they brought in. The model never reads it. /logbook pane shows the timeline either way.",
+      "default": true
+    }
+  }
+}
