@@ -7,3 +7,8 @@ description = "Bearer token"
 regex = '''(?i)\bbearer\s+([A-Za-z0-9._~+/-]{20,}=*)'''
 secretGroup = 1
 entropy = 4
+
+[[allowlists]]
+description = "Button keys pressed in mod tests"
+regexTarget = "line"
+regexes = ['''\.press\(\{ key: '[a-z0-9:-]+' \}\)''']
