@@ -2,7 +2,13 @@
 
 `plugins/gauge` and `plugins/deck` are new implementations inspired by `session-band` and
 `savvy-progress` from
-[claude-kit](https://github.com/JohnnyVizz/claude-kit) (commit `c871c15`), used under the MIT License:
+[claude-kit](https://github.com/JohnnyVizz/claude-kit) (commit `c871c15`), used under the MIT License.
+
+`plugins/deck/hooks/art.ts` copies from `plugins/savvy-progress/hooks/register.tsx` in that commit:
+the Pixel Clawd crabs with their costumes and CSS animations, the status marks, the pane styles, the
+tile and row layouts, the dotted grid and the dithered progress band. That file credits the crab and
+the chef's toque to DockCrab (Clawdy), whose own license could not be found. Clawd is Anthropic's
+Claude Code mascot.
 
 ```
 MIT License

@@ -7,7 +7,7 @@ Mods for [Claude Code](https://claude.com/claude-code).
 | Mod                          | What it does                                                                                            |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
 | [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                            |
-| [deck](plugins/deck)         | Pane with the session's subagents and workflow agents: model, tokens, context, estimated cost and time  |
+| [deck](plugins/deck)         | Pane of the session's agents as Pixel Clawd in costumes, with a progress band while they run            |
 | [bulkhead](plugins/bulkhead) | Guard for dangerous shell commands: blocks the catastrophic, stops the risky for a person               |
 | [livery](plugins/livery)     | Conversation theme for the desktop app: tinted replies, a blue prompt, code cards and tool rows by kind |
 

@@ -42,7 +42,8 @@ export const windowOf = (model: string): number => (/haiku-4|claude-3/i.test(mod
 
 export const modelName = (id: string): string => {
   const m = /(fable|mythos|opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?/i.exec(id)
-  if (!m) return id.replace(/^claude-/, '') || '-'
+  // An unknown id shows its last path segment: an inference profile ARN would leave no room on the row.
+  if (!m) return (id.split('/').pop() ?? '').replace(/^claude-/, '') || '-'
   const [, family = '', major = '', minor] = m
   return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? `.${minor}` : ''}`
 }

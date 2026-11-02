@@ -1,7 +1,7 @@
 {
   "name": "deck",
-  "version": "0.1.0",
-  "description": "Pane with the session's subagents and workflow agents: model, requests, tokens, context, estimated cost and time.",
+  "version": "0.2.0",
+  "description": "A row per subagent and workflow agent, Pixel Clawd in a costume for its model, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed and memory), and a dithered progress band above the prompt while they run.",
   "author": {
     "name": "Pablo Marques",
     "url": "https://github.com/PabloMarquess"
@@ -14,7 +14,7 @@
     "autoOpen": {
       "type": "boolean",
       "title": "Open the deck when the first agent starts",
-      "description": "Opens the pane once per session, when the first subagent or workflow agent starts. /deck opens it any time.",
+      "description": "Opens the pane once per session, when the first subagent or workflow agent starts. /deck pane opens it any time.",
       "default": true
     },
     "subagentCacheTtl": {
