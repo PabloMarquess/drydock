@@ -1,0 +1,22 @@
+{
+  "name": "livery",
+  "version": "0.1.0",
+  "description": "Conversation theme for the desktop app: a tinted reply with an accent strip, a blue prompt, code cards and tool rows colored by kind.",
+  "author": {
+    "name": "Pablo Marques",
+    "url": "https://github.com/PabloMarquess"
+  },
+  "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/livery",
+  "repository": "https://github.com/PabloMarquess/drydock",
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "palette": {
+      "type": "string",
+      "title": "Reply palette",
+      "description": "Background and accent strip of Claude's replies. plain draws the strip alone. /livery <palette> switches it for the session.",
+      "default": "manteiga",
+      "options": ["manteiga", "areia", "argila", "gelo", "cinza", "plain"]
+    }
+  }
+}

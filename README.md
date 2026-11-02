@@ -4,11 +4,12 @@ Mods for [Claude Code](https://claude.com/claude-code).
 
 ## Mods
 
-| Mod                          | What it does                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                           |
-| [deck](plugins/deck)         | Pane with the session's subagents and workflow agents: model, tokens, context, estimated cost and time |
-| [bulkhead](plugins/bulkhead) | Guard for dangerous shell commands: blocks the catastrophic, stops the risky for a person              |
+| Mod                          | What it does                                                                                            |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                            |
+| [deck](plugins/deck)         | Pane with the session's subagents and workflow agents: model, tokens, context, estimated cost and time  |
+| [bulkhead](plugins/bulkhead) | Guard for dangerous shell commands: blocks the catastrophic, stops the risky for a person               |
+| [livery](plugins/livery)     | Conversation theme for the desktop app: tinted replies, a blue prompt, code cards and tool rows by kind |
 
 ## Install
 

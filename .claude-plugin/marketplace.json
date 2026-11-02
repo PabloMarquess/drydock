@@ -28,6 +28,13 @@
       "description": "Guard for dangerous shell commands: blocks the catastrophic and stops the risky for a person to run or confirm.",
       "version": "0.1.0",
       "category": "mod"
+    },
+    {
+      "name": "livery",
+      "source": "./plugins/livery",
+      "description": "Conversation theme for the desktop app: a tinted reply with an accent strip, a blue prompt, code cards and tool rows colored by kind.",
+      "version": "0.1.0",
+      "category": "mod"
     }
   ]
 }
