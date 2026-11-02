@@ -176,7 +176,7 @@ export const register: Register = (on, options) => {
             {isDesktop ? (
               <Box flexDirection="row" backgroundColor={p.bg}>
                 <Box width={1} flexShrink={0} backgroundColor={p.accent} />
-                <Box flexDirection="column" flexGrow={1} paddingX={1}>
+                <Box flexDirection="column" flexGrow={1} minWidth={0} paddingX={1}>
                   <Markdown text={SAMPLE} />
                 </Box>
               </Box>
@@ -213,26 +213,24 @@ export const register: Register = (on, options) => {
     const drawn = isSplit(parts) ? null : await next(e)
     const { Box, Markdown, Code } = $.ui.resolve(e)
     return (
-      <Box flexDirection="row" backgroundColor={p.bg}>
-        <Box width={1} flexShrink={0} backgroundColor={p.accent} />
-        <Box flexDirection="column" flexGrow={1} paddingX={1} rowGap={1}>
-          {drawn ??
-            parts.map((part, i) =>
-              part.kind === 'text' ? (
-                <Markdown key={`t${i}`} text={part.text} />
-              ) : (
-                <Box
-                  key={`c${i}`}
-                  borderStyle="round"
-                  borderColor={TONES.code.accent}
-                  backgroundColor={TONES.code.bg}
-                  paddingX={1}
-                >
-                  <Code source={part.source} language={part.language || undefined} />
-                </Box>
-              ),
-            )}
-        </Box>
+      <Box flexDirection="column" backgroundColor={p.bg} paddingLeft={2} paddingRight={1} rowGap={1}>
+        <Box key="strip" position="absolute" top={0} bottom={0} left={0} width={1} backgroundColor={p.accent} />
+        {drawn ??
+          parts.map((part, i) =>
+            part.kind === 'text' ? (
+              <Markdown key={`t${i}`} text={part.text} />
+            ) : (
+              <Box
+                key={`c${i}`}
+                borderStyle="round"
+                borderColor={TONES.code.accent}
+                backgroundColor={TONES.code.bg}
+                paddingX={1}
+              >
+                <Code source={part.source} language={part.language || undefined} />
+              </Box>
+            ),
+          )}
       </Box>
     )
   })
@@ -243,11 +241,16 @@ export const register: Register = (on, options) => {
     const drawn = await next(e)
     const { Box } = $.ui.resolve(e)
     return (
-      <Box flexDirection="row" backgroundColor={t.bg} borderStyle="round" borderColor={t.accent}>
-        <Box width={1} flexShrink={0} backgroundColor={t.accent} />
-        <Box flexGrow={1} paddingX={1}>
-          {drawn}
-        </Box>
+      <Box
+        flexDirection="column"
+        backgroundColor={t.bg}
+        borderStyle="round"
+        borderColor={t.accent}
+        paddingLeft={2}
+        paddingRight={1}
+      >
+        <Box key="strip" position="absolute" top={0} bottom={0} left={0} width={1} backgroundColor={t.accent} />
+        {drawn}
       </Box>
     )
   })

@@ -33,7 +33,7 @@
       "name": "livery",
       "source": "./plugins/livery",
       "description": "Conversation theme for the desktop app: a tinted reply with an accent strip, a blue prompt, code cards and tool rows colored by kind.",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "category": "mod"
     }
   ]

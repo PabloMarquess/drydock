@@ -195,6 +195,27 @@ describe('messages', () => {
     expect(await ui.find({ type: 'engine' })).toBeDefined()
   })
 
+  test('desktop: the body of a reply and of a tool row can shrink, so a wide table is not cut off', async ($, on) => {
+    await start($, on)
+    const bodies = [
+      await mountReply($, 'desktop', reply('| a | b |\n| - | - |\n| wide | table |')),
+      await mountReply($, 'desktop', reply('Text\n\n```sh\nls\n```')),
+      await mountTool($, 'desktop', tool('Read')),
+    ]
+    for (const ui of bodies) {
+      const box = await outer(ui)
+      expect(box.type).toBe('Box')
+      expect(box.props).toMatchObject({ flexDirection: 'column' })
+      expect((box.children?.[0] as Drawn | undefined)?.props).toMatchObject({
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 1,
+      })
+      expect(JSON.stringify(box)).not.toContain('"flexDirection":"row"')
+    }
+  })
+
   test('desktop: fenced code splits into code cards', async ($, on) => {
     await start($, on)
     const text = 'Run this:\n\n```sh\npnpm run check\n```\n\nThen:\n\n```ts\nconst a = 1\n```\n\nDone.'
