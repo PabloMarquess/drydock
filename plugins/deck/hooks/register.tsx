@@ -33,7 +33,7 @@ const MAX_RUNS = 20
 const MAX_TEXT = 300
 const MAX_ID = 100
 const WARN_AT = 70
-const USAGE = 'Usage: /deck [pane|band|details|clear]'
+const USAGE = 'Usage: /deck [on|off|pane|band|details|clear]'
 
 const COST_NOTE =
   'Cost is an estimate at API list prices. Agent time is how long at least one listed agent was running: parallel agents count once, idle gaps not at all.'
@@ -331,8 +331,8 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'deck',
       description:
-        'Agents deck status; `pane` shows or hides it, `band` the band, `details` the extra numbers, `clear` drops finished agents',
-      argumentHint: '[pane|band|details|clear]',
+        'Agents deck status; `on` and `off` show or hide pane and band for this session, `pane` the pane alone, `band` the band, `details` the extra numbers, `clear` drops finished agents',
+      argumentHint: '[on|off|pane|band|details|clear]',
       immediate: true,
     })
     return result
@@ -344,6 +344,17 @@ export const register: Register = (on, options) => {
       const status = await statusOf($)
       for (const note of status.notes) $.ui.log(note)
       return { text: status.text }
+    }
+    if (arg === 'off') {
+      if ((await paneState($)) !== 'closed') await $.ui.close({ id: PANE })
+      await update($, isBandHidden, () => true)
+      await update($, autoOpened, () => true)
+      return { text: 'Deck off for this session: pane closed, band hidden.' }
+    }
+    if (arg === 'on') {
+      await update($, isBandHidden, () => false)
+      await update($, batch, (b) => ({ ...b, isDismissed: false }))
+      return { text: (await openPane($)).isPlaced ? 'Deck on.' : 'Deck on; the pane shows when there is room.' }
     }
     if (arg === 'pane') return { text: await togglePane($) }
     if (arg === 'band') {

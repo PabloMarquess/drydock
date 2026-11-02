@@ -101,6 +101,8 @@ On a terminal narrower than 144 columns a pane the deck opens by itself waits un
 | Command         |                                                                                                       |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
 | `/deck`         | Status on one line: agents, cost, time, whether pane and band show; what the numbers mean as a notice |
+| `/deck on`      | Shows the pane and the band for this session                                                          |
+| `/deck off`     | Closes the pane, hides the band and keeps the pane from opening by itself, for this session           |
 | `/deck pane`    | Shows or hides the pane                                                                               |
 | `/deck band`    | Shows or hides the band for the session                                                               |
 | `/deck details` | Shows or hides the details: Cost and Time tiles in the header, and extra lines on every row           |

@@ -730,6 +730,26 @@ describe('band', () => {
 })
 
 describe('/deck', () => {
+  test('off closes the pane, hides the band and keeps the pane closed for the session; on brings both back', async ($, on) => {
+    const { world, band } = await start($, on)
+    await spawn($, 'one')
+    expect(world.panes.map((p) => p.id)).toContain('deck')
+    expect(await text(band, 'band')).toContain('0/1')
+
+    expect(await deck($, 'off')).toMatchObject({ text: 'Deck off for this session: pane closed, band hidden.' })
+    expect(world.panes.map((p) => p.id)).not.toContain('deck')
+    expect(await text(band, 'band')).toBeUndefined()
+    const opens = world.opens
+    await spawn($, 'two')
+    expect(world.opens).toBe(opens)
+    expect(await text(band, 'band')).toBeUndefined()
+    expect(((await deck($, '')) as { text: string }).text).toContain('Pane closed, band hidden')
+
+    expect(await deck($, 'ON')).toMatchObject({ text: 'Deck on.' })
+    expect(world.panes.map((p) => p.id)).toContain('deck')
+    expect(await text(band, 'band')).toContain('0/2')
+  })
+
   test('no argument shows the status on one line; what the numbers mean is a notice', async ($, on) => {
     const { clock, world } = await start($, on)
     await spawn($, 'one')
@@ -793,6 +813,6 @@ describe('/deck', () => {
 
   test('an unknown argument shows the usage', async ($, on) => {
     await start($, on)
-    expect(await deck($, 'nope')).toMatchObject({ text: 'Usage: /deck [pane|band|details|clear]' })
+    expect(await deck($, 'nope')).toMatchObject({ text: 'Usage: /deck [on|off|pane|band|details|clear]' })
   })
 })
