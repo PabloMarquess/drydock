@@ -1,5 +1,13 @@
 # livery
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/preview/livery-dark.png">
+    <img alt="A desktop conversation in the default manteiga palette: a blue prompt, tool rows colored by kind, and a tinted reply with a code card." src="../../docs/preview/livery-light.png" width="733">
+  </picture>
+</p>
+<p align="center"><sub>An illustration of the colors: the messages and rows themselves are drawn by Claude Code.</sub></p>
+
 A conversation theme for the desktop app. Claude's replies get a tinted background with an accent strip on the left, your prompts a blue card, fenced code its own card, and every tool row a color by kind:
 
 | Row                                    | Color      |

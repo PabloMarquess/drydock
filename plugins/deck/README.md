@@ -1,5 +1,12 @@
 # deck
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/preview/deck-dark.png">
+    <img alt="The deck pane: Running, Finished and Failed tiles, one row per agent with Pixel Clawd in a costume for its model, and the dithered band below." src="../../docs/preview/deck-light.png" width="691">
+  </picture>
+</p>
+
 A pane with the session's subagents and workflow agents, one row each, and a band above the prompt while a batch of agents runs. Each agent is Pixel Clawd, the crab, in a costume for its model.
 
 ```

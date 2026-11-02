@@ -1,5 +1,12 @@
 # bulkhead
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/preview/bulkhead-dark.png">
+    <img alt="Two refused Bash calls with the reasons bulkhead gives, then /bulkhead showing the guard on and /bulkhead pause pinning its warning." src="../../docs/preview/bulkhead-light.png" width="733">
+  </picture>
+</p>
+
 A guard for the Bash tool. It reads every command Claude runs, in the main conversation and in subagents, before it reaches the shell:
 
 - **Block** (always refused): commands that destroy things with no way back.

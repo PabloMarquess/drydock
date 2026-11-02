@@ -1,5 +1,12 @@
 # gauge
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../../docs/preview/gauge-dark.png">
+    <img alt="The gauge band: turn, output speed, turn and session cost, prompt cache countdown and context fill, drawn as chips with icons." src="../../docs/preview/gauge-light.png" width="693">
+  </picture>
+</p>
+
 A band above the prompt with the session's live readings:
 
 ```
