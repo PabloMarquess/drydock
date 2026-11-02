@@ -1,6 +1,6 @@
 import type { ModelUsage } from 'claude-code'
 
-export type Price = { input: number; output: number; cacheRead: number }
+type Price = { input: number; output: number; cacheRead: number }
 
 // Anthropic list prices, USD per million tokens, October 2026.
 const PRICES: [RegExp, Price][] = [

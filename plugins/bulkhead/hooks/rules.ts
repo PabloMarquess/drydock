@@ -220,7 +220,7 @@ const expandAlias = (segment: string): string => {
 // The $ of $( stays with the segment on its left, so cd "$(...)" moves somewhere unknown instead of home.
 const SEGMENT = /;|&&|\|\||\||&|\n|`|\(|\)/
 
-export const segments = (command: string): string[] =>
+const segments = (command: string): string[] =>
   command
     .replace(/\\\n/g, ' ')
     .split(SEGMENT)
@@ -484,7 +484,7 @@ const sticky = (re: RegExp, src: string, at: number): RegExpExecArray | null => 
 // The command with text that is never run scrubbed into one opaque word: quoted arguments and heredoc bodies of the
 // TEXT commands above, and comments. Returns the command unchanged when the line holds anything else that could run
 // that text (a shell, an interpreter, a variable as a command, arithmetic) or when it cannot be read with certainty.
-export const literal = (src: string): string => {
+const literal = (src: string): string => {
   // (( )), ${...} and $[...] keep spaces, #, << and nested quotes inside one word, which the scan below misreads
   if (/\(\(|\$[{[]/.test(src)) return src
   let out = ''
