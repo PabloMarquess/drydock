@@ -44,4 +44,8 @@ Claude Code does not expose the cache lifetime to mods, so the countdown follows
 
 ## Commands
 
-`/gauge` shows or hides the band. The `×` on the band hides it too.
+| Command      |                                                            |
+| ------------ | ---------------------------------------------------------- |
+| `/gauge`     | Status: on or off, the cache lifetime and the warning time |
+| `/gauge on`  | Shows the band for this session                            |
+| `/gauge off` | Hides the band for this session, as does the `×` on it     |

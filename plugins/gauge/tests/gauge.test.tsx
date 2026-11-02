@@ -148,10 +148,10 @@ const start = async ($: Engine, on: On, surface: 'terminal' | 'desktop' = 'termi
   return { world, clock, ui }
 }
 
-const gaugeCommand = ($: Engine) =>
+const gaugeCommand = ($: Engine, args = '') =>
   $.command.run({
     command: 'gauge',
-    args: '',
+    args,
     origin: { kind: 'composer' },
     presentation: { isFullscreen: false, columns: 120 },
   })
@@ -356,16 +356,29 @@ describe('band', () => {
     expect(cost?.props.source).not.toContain('/ $0.12')
   })
 
-  test('the dismiss button hides and /gauge toggles', async ($, on) => {
+  test('the dismiss button hides; /gauge on and off show and hide; /gauge alone shows the status', async ($, on) => {
     const { world, clock, ui } = await start($, on)
     await turn($, clock, world, 't1')
 
+    expect(await gaugeCommand($)).toMatchObject({
+      text: 'Gauge on · cache lifetime 60 min · cache warning 5 min before.',
+    })
     await ui.press({ key: 'hide' })
     expect(await text(ui, 'turn')).toBeUndefined()
-    expect(await gaugeCommand($)).toMatchObject({ text: 'Gauge shown.' })
+    expect(await gaugeCommand($)).toMatchObject({ text: expect.stringContaining('Gauge off') })
+    expect(await gaugeCommand($, 'on')).toMatchObject({ text: 'Gauge on.' })
     expect(await text(ui, 'turn')).toBe('Turn 1')
-    expect(await gaugeCommand($)).toMatchObject({ text: 'Gauge hidden.' })
+    expect(await gaugeCommand($, 'ON')).toMatchObject({ text: 'Gauge on.' })
+    expect(await text(ui, 'turn')).toBe('Turn 1')
+    expect(await gaugeCommand($, 'off')).toMatchObject({ text: 'Gauge off for this session.' })
     expect(await text(ui, 'turn')).toBeUndefined()
+    expect(await gaugeCommand($, 'toggle')).toMatchObject({ text: 'Usage: /gauge [on | off]' })
+    expect(await text(ui, 'turn')).toBeUndefined()
+  })
+
+  test('/gauge reports a turned-off cache warning', { options: { warnMinutes: 0 } }, async ($, on) => {
+    await start($, on)
+    expect(await gaugeCommand($)).toMatchObject({ text: 'Gauge on · cache lifetime 60 min · cache warning off.' })
   })
 
   test('a survey takes the band', async ($, on) => {

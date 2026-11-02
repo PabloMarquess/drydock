@@ -183,13 +183,25 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     tick?.cancel()
     tick = startTick($, ttlMs, warnSeconds)
-    await $.command.register({ name: 'gauge', description: 'Show or hide the gauge band', immediate: true })
+    await $.command.register({
+      name: 'gauge',
+      description: 'Show the gauge status; `on` and `off` show or hide the band for this session',
+      argumentHint: '[on|off]',
+      immediate: true,
+    })
     return result
   })
 
-  on('command.run', { command: 'gauge' }, async ($) => {
-    const hidden = await update($, isHidden, (h) => !h)
-    return { text: hidden ? 'Gauge hidden.' : 'Gauge shown.' }
+  on('command.run', { command: 'gauge' }, async ($, e) => {
+    const arg = e.args.trim().toLowerCase()
+    if (arg === 'on' || arg === 'off') {
+      await update($, isHidden, () => arg === 'off')
+      return { text: arg === 'on' ? 'Gauge on.' : 'Gauge off for this session.' }
+    }
+    if (arg !== '') return { text: 'Usage: /gauge [on | off]' }
+    const state = (await read($, isHidden)) ? 'off' : 'on'
+    const warn = warnSeconds === 0 ? 'cache warning off' : `cache warning ${Math.round(warnSeconds / 60)} min before`
+    return { text: `Gauge ${state} · cache lifetime ${ttlMs / 60_000} min · ${warn}.` }
   })
 
   on('turn.start', async ($, e, next) => {
