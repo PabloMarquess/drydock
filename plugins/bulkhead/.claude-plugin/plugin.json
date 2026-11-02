@@ -1,6 +1,6 @@
 {
   "name": "bulkhead",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Guard for dangerous shell commands: blocks the catastrophic and stops the risky for a person to run or confirm.",
   "author": {
     "name": "Pablo Marques",
@@ -9,6 +9,7 @@
   "homepage": "https://github.com/PabloMarquess/drydock/tree/main/plugins/bulkhead",
   "repository": "https://github.com/PabloMarquess/drydock",
   "license": "MIT",
+  "types": "./types/index.d.ts",
   "userConfig": {
     "confirmStyle": {
       "type": "string",

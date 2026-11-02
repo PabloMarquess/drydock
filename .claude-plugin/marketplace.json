@@ -26,7 +26,7 @@
       "name": "bulkhead",
       "source": "./plugins/bulkhead",
       "description": "Guard for dangerous shell commands: blocks the catastrophic and stops the risky for a person to run or confirm.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "category": "mod"
     },
     {
