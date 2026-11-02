@@ -18,4 +18,6 @@ notes=$(awk -v v="$version" '
 ' "$dir/CHANGELOG.md")
 [ -n "$(printf '%s' "$notes" | tr -d '[:space:]')" ] || { echo "release: $dir/CHANGELOG.md has no entry for $version" >&2; exit 1; }
 
+if gh release view "$tag" >/dev/null 2>&1; then echo "release: $tag already published"; exit 0; fi
+
 printf '%s\n' "$notes" | gh release create "$tag" --verify-tag --title "$mod v$version" --notes-file -
