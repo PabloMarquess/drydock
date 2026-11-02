@@ -1,3 +1,5 @@
+<img src="../../docs/mascots/deck.svg" width="136" align="right" alt="">
+
 # deck
 
 <p align="center">

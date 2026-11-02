@@ -1,3 +1,5 @@
+<img src="../../docs/mascots/gauge.svg" width="136" align="right" alt="">
+
 # gauge
 
 <p align="center">

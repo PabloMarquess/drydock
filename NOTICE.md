@@ -6,7 +6,8 @@
 
 `plugins/deck/hooks/art.ts` copies from `plugins/savvy-progress/hooks/register.tsx` in that commit:
 the Pixel Clawd crabs with their costumes and CSS animations, the status marks, the pane styles, the
-tile and row layouts, the dotted grid and the dithered progress band. That file credits the crab and
+tile and row layouts, the dotted grid and the dithered progress band. The mascots in `docs/mascots`
+draw the same crab body in costumes of drydock's own. That file credits the crab and
 the chef's toque to DockCrab (Clawdy), whose own license could not be found. Clawd is Anthropic's
 Claude Code mascot.
 

@@ -1,3 +1,5 @@
+<img src="../../docs/mascots/bulkhead.svg" width="136" align="right" alt="">
+
 # bulkhead
 
 <p align="center">
@@ -25,7 +27,7 @@ A refusal tells the model why and asks it to hand the command to you, not to rep
 
 Each part of a command is checked on its own (`a && b`, `a | b`, `$(…)`, `bash -c "…"`), so a dangerous step can't hide behind a safe one. Quotes and escapes inside words (`r'm'`, `\rm`), a `cd` earlier in the line and common oh-my-zsh aliases (`k`, `kdelns`, `gpf!`, `grhh`…) are taken into account. Dry runs (`kubectl --dry-run=client|server`, `terraform plan -destroy`) and cleanup of `/tmp`, `/var/tmp` and `~/.cache` pass.
 
-Text that is never run is not judged: quoted arguments and heredoc bodies of `echo`, `printf`, `grep`, `rg`, `cat`, `tee`, `git commit/tag/log/show/notes/stash` and `gh pr/issue/release`, and comments. That holds only when every command in the line is one of these, `git`, `gh`, `cd`, `ls`, `head`, `tail`, `wc` or `true`; anything else in the line (a shell, an interpreter, a pipe into `sh`) and the whole line is judged.
+Text that is never run is not judged: quoted arguments and heredoc bodies of `echo`, `printf`, `grep`, `rg`, `cat`, `tee`, `git commit/tag/log/show/notes/stash` and `gh pr/issue/release`, and comments. That holds only when every command in the line is one of these, `git`, `gh`, `cd`, `ls`, `head`, `tail`, `wc`, `true`, `mkdir`, `chmod` or `touch`; anything else in the line (a shell, an interpreter, a pipe into `sh`) and the whole line is judged.
 
 ## Limits
 

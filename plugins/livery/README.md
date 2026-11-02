@@ -1,3 +1,5 @@
+<img src="../../docs/mascots/livery.svg" width="136" align="right" alt="">
+
 # livery
 
 <p align="center">
