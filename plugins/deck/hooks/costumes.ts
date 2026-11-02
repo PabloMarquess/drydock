@@ -23,11 +23,9 @@ const TITLE: Readonly<Record<Costume, string>> = {
   other: 'crab',
 }
 
-export const TARGETS = ['all', 'explore', 'plan', 'fable', 'opus', 'sonnet', 'haiku'] as const
+export const TARGETS = ['all', 'explore', 'plan', 'fable', 'opus', 'sonnet', 'haiku', 'kiro'] as const
 
 export const costumeNamed = (word: string): Costume | undefined => NAMES[word.toLowerCase()]
-
-export const costumeTitle = (c: Costume): string => TITLE[c]
 
 const isTarget = (word: string): boolean => (TARGETS as readonly string[]).includes(word)
 
@@ -67,14 +65,49 @@ const familyOf = (model: string): string | undefined =>
           ? 'haiku'
           : undefined
 
-/** The agent's type wins over its model, a named target over `all`, and the built-in rule comes last. */
-export const wear = (wardrobe: Wardrobe, type: string, model: string): Costume => {
-  const kind = type === 'Explore' ? 'explore' : type === 'Plan' ? 'plan' : undefined
+const kindOf = (type: string): string | undefined =>
+  type === 'Explore' ? 'explore' : type === 'Plan' ? 'plan' : type === 'Kiro' ? 'kiro' : undefined
+
+/** What one wardrobe puts on an agent: its type's target, then its model family's, then `all`. */
+export const chosen = (wardrobe: Wardrobe, type: string, model: string): Costume | undefined => {
+  const kind = kindOf(type)
   const family = familyOf(model)
-  return (kind && wardrobe[kind]) || (family && wardrobe[family]) || wardrobe.all || costumeOf(type, model)
+  return (kind && wardrobe[kind]) || (family && wardrobe[family]) || wardrobe.all || undefined
 }
 
-export const describeWardrobe = (wardrobe: Wardrobe): string => {
-  const pairs = TARGETS.filter((t) => wardrobe[t]).map((t) => `${t} ${TITLE[wardrobe[t] as Costume]}`)
+// Every costume, in a fixed order: a random draw indexes it.
+const DRAW: readonly Costume[] = ['fable', 'heavy', 'careful', 'medium', 'light', 'explore', 'other']
+
+// FNV-1a over UTF-16 code units: the same id draws the same costume on every redraw and reload.
+const hash = (s: string): number => {
+  let h = 0x811c9dc5
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h
+}
+
+/** The costume an agent draws when costumes are random: one of the seven, fixed by its id. */
+export const randomCostume = (id: string): Costume => DRAW[hash(id) % DRAW.length] ?? 'other'
+
+/** The session's choices, the `costumes` option's, and whether the rest draw a random costume. */
+export type Dress = { session: Wardrobe; option: Wardrobe; isRandom: boolean }
+
+/** The session's choice wins, then the option's, then a random draw when on, then the type and model rule. */
+export const wear = (dress: Dress, id: string, type: string, model: string): Costume =>
+  chosen(dress.session, type, model) ??
+  chosen(dress.option, type, model) ??
+  (dress.isRandom ? randomCostume(id) : costumeOf(type, model))
+
+const pairsOf = (wardrobe: Wardrobe, shadow: Wardrobe = {}): string[] =>
+  shadow.all ? [] : TARGETS.filter((t) => wardrobe[t] && !shadow[t]).map((t) => `${t} ${TITLE[wardrobe[t] as Costume]}`)
+
+/** The session's choices, then the option's it leaves standing, then what the rest wear. */
+export const describeDress = (dress: Dress): string => {
+  const pairs = [...pairsOf(dress.session), ...pairsOf(dress.option, dress.session)]
+  if (dress.session.all || dress.option.all) return pairs.join(', ')
+  if (dress.isRandom)
+    return pairs.length ? `${pairs.join(', ')}, a random costume for the rest` : 'a random costume per agent'
   return pairs.length ? pairs.join(', ') : 'the default (by type, then model)'
 }

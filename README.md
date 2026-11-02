@@ -16,13 +16,13 @@
 
 ## Mods
 
-|                                                         | Mod                          | What it does                                                                                            |
-| ------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------- |
-| <img src="docs/mascots/gauge.svg" width="40" alt="">    | [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                            |
-| <img src="docs/mascots/deck.svg" width="40" alt="">     | [deck](plugins/deck)         | Pane of the session's agents as Pixel Clawd in costumes, with a progress band while they run            |
-| <img src="docs/mascots/bulkhead.svg" width="40" alt=""> | [bulkhead](plugins/bulkhead) | Guard for dangerous shell commands: blocks the catastrophic, stops the risky for a person               |
-| <img src="docs/mascots/livery.svg" width="40" alt="">   | [livery](plugins/livery)     | Conversation theme for the desktop app: tinted replies, a blue prompt, code cards and tool rows by kind |
-| <img src="docs/mascots/logbook.svg" width="40" alt="">  | [logbook](plugins/logbook)   | Ship's log of where Claude got its context each turn: skills, MCP servers, files, web and subagents     |
+|                                                         | Mod                          | What it does                                                                                                    |
+| ------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| <img src="docs/mascots/gauge.svg" width="40" alt="">    | [gauge](plugins/gauge)       | Band above the prompt: turn, speed, cost, prompt cache countdown and context                                    |
+| <img src="docs/mascots/deck.svg" width="40" alt="">     | [deck](plugins/deck)         | Pane of the session's agents, Kiro runs and background tasks as pixel crew, with a progress band while they run |
+| <img src="docs/mascots/bulkhead.svg" width="40" alt=""> | [bulkhead](plugins/bulkhead) | Guard for dangerous shell commands: blocks the catastrophic, stops the risky for a person                       |
+| <img src="docs/mascots/livery.svg" width="40" alt="">   | [livery](plugins/livery)     | Conversation theme for the desktop app: tinted replies, a blue prompt, code cards and tool rows by kind         |
+| <img src="docs/mascots/logbook.svg" width="40" alt="">  | [logbook](plugins/logbook)   | Ship's log of where Claude got its context each turn: skills, MCP servers, files, web and subagents             |
 
 ## Install
 

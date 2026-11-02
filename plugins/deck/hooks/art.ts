@@ -1,9 +1,9 @@
-import type { AgentStatus, Costume } from '../types'
+import type { AgentStatus, Costume, Species } from '../types'
 
 // Drawings ported from claude-kit's savvy-progress (commit c871c15, MIT): Pixel Clawd and its
 // costumes, the pane's rows, tiles and dotted grid, and the band's dithered bar. Pure strings in, SVG out.
 
-export type { Costume }
+export type { Costume, Species }
 
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif"
 
@@ -58,10 +58,42 @@ export const TIER_COLOR: Record<string, string> = {
 
 export const colorOf = (tier: string): string => TIER_COLOR[tier] ?? '#888780'
 
-// Built-in Explore and Plan agents wear their own costume; any other agent dresses for its model.
+/** The pirate and the plain crab have no colour of their own: they draw in grey. */
+export const hasOwnColour = (costume: string): boolean => costume !== 'other' && costume in TIER_COLOR
+
+// Kiro's ghost: the body and its shade, and the text purple for a light and a dark pane. The text reads
+// at least 4.5:1 on its pane; the body, which also marks the row, at least 3:1 on both.
+export const KIRO = { body: '#8B5CF6', shade: '#7C3AED', light: '#6D28D9', dark: '#A78BFA' }
+
+/** A Kiro row whose costume has no colour of its own takes the ghost's purple. */
+export const isPurple = (costume: string, species: Species = 'crab'): boolean =>
+  species === 'ghost' && !hasOwnColour(costume)
+
+// The submarine of a background task: teal hull, navy tower, brass propeller; and its text teal for a
+// light and a dark pane. The text reads at least 4.5:1 on its pane; the hull, which also marks the row,
+// at least 3:1 on both.
+export const SUB = {
+  hull: '#2A9D8F',
+  high: '#5FC4B8',
+  low: '#1F766C',
+  navy: '#2C5E9E',
+  port: '#D7F3F7',
+  brass: '#E0A526',
+  bubble: '#8ED6E6',
+  light: '#0E6B78',
+  dark: '#5CC8D6',
+}
+
+/** The colour of a row's live dot and terminal mark: the ghost's purple, the hull's teal, or the costume's. */
+export const markColorOf = (costume: string, species: Species = 'crab'): string =>
+  species === 'sub' ? SUB.hull : isPurple(costume, species) ? KIRO.body : colorOf(costume)
+
+// Built-in Explore and Plan agents wear their own costume, Kiro the plain ghost; any other agent dresses
+// for its model.
 export const costumeOf = (type: string, model: string): Costume => {
   if (type === 'Explore') return 'explore'
   if (type === 'Plan') return 'careful'
+  if (type === 'Kiro') return 'other'
   const id = model.toLowerCase()
   if (/fable|mythos/.test(id)) return 'fable'
   if (/opus/.test(id)) return 'heavy'
@@ -79,6 +111,9 @@ const INK = '#1F1E1D'
 // costume, `la`/`lb` the leg pairs, anything else a prop with its own motion.
 type Fill = (x: number, y: number, w: number, h: number, c: string, cls?: string) => void
 
+// The figure a costume dresses: the crab, or Kiro's ghost on the same footprint.
+type Body = (f: Fill, armFront?: number, armCls?: string) => void
+
 const stamp = (f: Fill, x: number, y: number, rows: string[], map: Record<string, string>, cls?: string): void => {
   rows.forEach((row, dy) => {
     ;[...row].forEach((ch, dx) => {
@@ -89,7 +124,7 @@ const stamp = (f: Fill, x: number, y: number, rows: string[], map: Record<string
 }
 
 // `armCls` lets a raised claw travel with the prop it holds.
-const crabBody = (f: Fill, armFront = 0, armCls?: string): void => {
+const crabBody: Body = (f, armFront = 0, armCls) => {
   f(7, 10, 16, 12, CLAY)
   f(3, 14, 4, 4, CLAY)
   f(23, 14 + armFront, 4, 4, CLAY, armCls)
@@ -99,6 +134,29 @@ const crabBody = (f: Fill, armFront = 0, armCls?: string): void => {
   f(17, 22, 2, 4, CLAY, 'la')
   f(11, 22, 2, 4, CLAY, 'lb')
   f(21, 22, 2, 4, CLAY, 'lb')
+}
+
+// Our own pixel ghost, in the spirit of Kiro's: a round-topped purple body with a three-lobed hem, two
+// eyes and little arm nubs where the crab has its claws, so every costume's hat and prop sits on it as on
+// the crab. Its domed top (y8-9) hides under most hats.
+const ghostBody: Body = (f, armFront = 0, armCls) => {
+  f(10, 8, 10, 1, KIRO.body)
+  f(8, 9, 14, 1, KIRO.body)
+  f(7, 10, 16, 14, KIRO.body)
+  f(7, 24, 4, 1, KIRO.body)
+  f(13, 24, 4, 1, KIRO.body)
+  f(19, 24, 4, 1, KIRO.body)
+  f(8, 25, 2, 1, KIRO.shade)
+  f(14, 25, 2, 1, KIRO.shade)
+  f(20, 25, 2, 1, KIRO.shade)
+  f(4, 14, 3, 1, KIRO.body)
+  f(3, 15, 4, 2, KIRO.body)
+  f(4, 17, 3, 1, KIRO.shade)
+  f(23, 14 + armFront, 3, 1, KIRO.body, armCls)
+  f(23, 15 + armFront, 4, 2, KIRO.body, armCls)
+  f(23, 17 + armFront, 3, 1, KIRO.shade, armCls)
+  f(10, 12, 2, 2, INK)
+  f(18, 12, 2, 2, INK)
 }
 
 // Pure CSS, run by the compositor: no redraws. Periods divide one second, so the
@@ -130,10 +188,79 @@ export const CRAB_CSS = `<style>
 @media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
 </style>`
 
-const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
+// The ghost floats in place of the crab's walk; CRAB_CSS's reduced-motion rule stops it too.
+export const GHOST_CSS = `<style>
+.ghost.run{animation:drift 1s ease-in-out infinite}.ghost.run .bd{animation:none}
+@keyframes drift{50%{transform:translateY(-1.5px)}}
+</style>`
+
+const KIRO_TEXT_CSS = `<style>.kv{fill:${KIRO.light}}@media (prefers-color-scheme: dark){.kv{fill:${KIRO.dark}}}</style>`
+
+// While it runs the propeller turns (two frames, a quarter second each) and three bubbles rise, each a
+// third of a second behind the last; periods divide one second, as the crab's do. Still, it shows the
+// first frame and no bubbles.
+export const SUB_CSS = `<style>
+.sub .pb,.sub .bub{opacity:0}
+.sub.run .pa{animation:pa .25s steps(1) infinite}.sub.run .pb{animation:pb .25s steps(1) infinite}
+@keyframes pa{50%{opacity:0}}@keyframes pb{50%{opacity:1}}
+.sub.run .bub{animation:rise 1s steps(1) infinite}.sub.run .b2{animation-delay:-.33s}.sub.run .b3{animation-delay:-.67s}
+@keyframes rise{25%{opacity:1;transform:translateY(-1px)}50%{opacity:1;transform:translateY(-3px)}75%{opacity:.5;transform:translateY(-5px)}}
+@media (prefers-reduced-motion: reduce){.sub.run .pa,.sub.run .pb,.sub.run .bub{animation:none}}
+</style>`
+
+const SUB_TEXT_CSS = `<style>.tv{fill:${SUB.light}}@media (prefers-color-scheme: dark){.tv{fill:${SUB.dark}}}</style>`
+
+// Our own submarine on the crab's 30×28 grid: hull x5-24 y13-21 with three portholes, a navy tower and
+// periscope above, a fin at the stern and the propeller behind it.
+const drawSub = (x: number, y: number, dim: boolean, isRunning: boolean, scale: number): string => {
+  const groups = new Map<string, string[]>()
+  const f = (cx: number, cy: number, w: number, h: number, c: string, cls = 'hl') => {
+    if (!groups.has(cls)) groups.set(cls, [])
+    groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`)
+  }
+  f(18, 4, 3, 1, SUB.navy)
+  f(21, 4, 1, 1, SUB.port)
+  f(18, 5, 1, 4, SUB.navy)
+  f(14, 9, 5, 1, SUB.navy)
+  f(13, 10, 7, 3, SUB.navy)
+  f(5, 11, 2, 2, SUB.navy)
+  f(6, 13, 2, 1, SUB.navy)
+  f(8, 13, 14, 1, SUB.hull)
+  f(6, 14, 18, 1, SUB.high)
+  f(5, 15, 20, 5, SUB.hull)
+  f(6, 20, 18, 1, SUB.low)
+  f(8, 21, 14, 1, SUB.low)
+  f(10, 16, 2, 2, SUB.port)
+  f(15, 16, 2, 2, SUB.port)
+  f(20, 16, 2, 2, SUB.port)
+  f(2, 17, 3, 1, SUB.navy)
+  f(1, 14, 2, 3, SUB.brass, 'pa')
+  f(1, 18, 2, 3, SUB.brass, 'pa')
+  f(0, 16, 3, 1, SUB.brass, 'pb')
+  f(0, 18, 3, 1, SUB.brass, 'pb')
+  f(5, 9, 2, 2, SUB.bubble, 'bub b1')
+  f(3, 5, 2, 2, SUB.bubble, 'bub b2')
+  f(6, 2, 1, 1, SUB.bubble, 'bub b3')
+  const body = [...groups.entries()].map(([cls, rects]) => `<g class="${cls}">${rects.join('')}</g>`).join('')
+  const place = `translate(${x},${y}) scale(${scale})`
+  return `<g transform="${place}" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="sub${isRunning ? ' run' : ''}">${body}</g></g>`
+}
+
+const subs = new Map<string, string>()
+/** A background task's submarine: its propeller turns and bubbles rise while it runs. */
+export const sub = (x: number, y: number, dim = false, isRunning = false, scale = CRAB_SCALE): string => {
+  const key = `${x},${y},${dim},${isRunning},${scale}`
+  const hit = subs.get(key)
+  if (hit !== undefined) return hit
+  const drawn = drawSub(x, y, dim, isRunning, scale)
+  if (subs.size < 64) subs.set(key, drawn)
+  return drawn
+}
+
+const COSTUMES: Record<string, (f: Fill, t: string, body: Body) => void> = {
   // Fable: astronaut in a glass dome; floats instead of walking, the antenna and the star blink.
-  fable: (f, t) => {
-    crabBody(f)
+  fable: (f, t, body) => {
+    body(f)
     f(6, 7, 18, 1, '#E6E8EE')
     f(5, 8, 1, 14, '#E6E8EE')
     f(24, 8, 1, 14, '#E6E8EE')
@@ -148,8 +275,8 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     f(26, 4, 3, 1, '#F5C542', 'star')
   },
   // Heavy: detective with a deerstalker; the magnifier sweeps and glints.
-  heavy: (f, t) => {
-    crabBody(f, -4, 'it')
+  heavy: (f, t, body) => {
+    body(f, -4, 'it')
     stamp(
       f,
       6,
@@ -171,8 +298,8 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     f(24, 2, 1, 1, '#fff', 'gl')
   },
   // Careful: engineer in a hard hat; the wrench turns a bolt.
-  careful: (f, t) => {
-    crabBody(f)
+  careful: (f, t, body) => {
+    body(f)
     stamp(
       f,
       6,
@@ -191,8 +318,8 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     stamp(f, 0, 10, ['.s.s', 'sss.', '.s..', '.s..'], { s: '#8E929A' }, 'it')
   },
   // Medium: chef, the toque traced from DockCrab's Sprites.chefHat; tosses the omelette.
-  medium: (f, t) => {
-    crabBody(f, -4, 'pan')
+  medium: (f, t, body) => {
+    body(f, -4, 'pan')
     stamp(
       f,
       6,
@@ -216,8 +343,8 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     f(24, 7, 3, 1, '#F5B731', 'egg')
   },
   // Light: racer in a helmet; runs at double pace, the checkered flag flutters.
-  light: (f, t) => {
-    crabBody(f, -4)
+  light: (f, t, body) => {
+    body(f, -4)
     stamp(
       f,
       6,
@@ -236,8 +363,8 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     stamp(f, 26, 1, ['wkwk', 'kwkw', 'wkwk'], { w: '#F8F6F1', k: INK }, 'flag')
   },
   // Explore: pirate scouting the code; the cutlass fences.
-  explore: (f) => {
-    crabBody(f)
+  explore: (f, _t, body) => {
+    body(f)
     stamp(
       f,
       5,
@@ -256,7 +383,7 @@ const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
     f(27, 6, 1, 9, '#C9CCD2', 'it')
     f(26, 15, 3, 1, '#7A4A26', 'it')
   },
-  other: (f) => crabBody(f),
+  other: (f, _t, body) => body(f),
 }
 
 const CRAB_SCALE = 1.1
@@ -267,25 +394,28 @@ const drawCrab = (
   x: number,
   y: number,
   costume: string,
-  dim = false,
-  isWalking = false,
-  scale = CRAB_SCALE,
+  dim: boolean,
+  isWalking: boolean,
+  scale: number,
+  species: Species,
 ): string => {
   const groups = new Map<string, string[]>([['bd', []]])
   const f: Fill = (cx, cy, w, h, c, cls = 'bd') => {
     if (!groups.has(cls)) groups.set(cls, [])
     groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`)
   }
-  const draw = COSTUMES[costume] ?? ((g: Fill) => crabBody(g))
-  draw(f, colorOf(costume))
+  const draw = COSTUMES[costume] ?? ((g: Fill, _t: string, body: Body) => body(g))
+  draw(f, colorOf(costume), species === 'ghost' ? ghostBody : crabBody)
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter((k) => k !== 'bd' && k !== 'la' && k !== 'lb')
   const body = `<g class="bd">${(groups.get('bd') ?? []).join('')}${props.map(group).join('')}</g>`
   const place = `translate(${x},${y}) scale(${scale})`
-  return `<g transform="${place}" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${costume}${isWalking ? ' run' : ''}">${body}${group('la')}${group('lb')}</g></g>`
+  const cls = `c-${costume}${species === 'ghost' ? ' ghost' : ''}${isWalking ? ' run' : ''}`
+  return `<g transform="${place}" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="${cls}">${body}${group('la')}${group('lb')}</g></g>`
 }
 
-// A crab depends on nothing but its arguments, which take a handful of values: drawn once each.
+// A crab depends on nothing but its arguments, which take a handful of values: drawn once each. The
+// ghost is the same call with `species` 'ghost': it floats where `isWalking` makes a crab walk.
 const crabs = new Map<string, string>()
 export const crab = (
   x: number,
@@ -294,27 +424,37 @@ export const crab = (
   dim = false,
   isWalking = false,
   scale = CRAB_SCALE,
+  species: Species = 'crab',
 ): string => {
-  const key = `${x},${y},${costume},${dim},${isWalking},${scale}`
+  const key = `${x},${y},${costume},${dim},${isWalking},${scale},${species}`
   const hit = crabs.get(key)
   if (hit !== undefined) return hit
-  const drawn = drawCrab(x, y, costume, dim, isWalking, scale)
+  const drawn = drawCrab(x, y, costume, dim, isWalking, scale, species)
   if (crabs.size < 256) crabs.set(key, drawn)
   return drawn
 }
 
+// The status marks: a green check, a red cross, and a grey ring for a task whose end the deck never saw;
+// each at least 3:1 on a light and on a dark pane.
+export const MARK = { done: '#3B9C5F', failed: '#D0453F', unknown: '#888780' }
+
 export const statusMark = (x: number, y: number, status: AgentStatus, color: string): string => {
   if (status === 'running') return `<circle class="live" cx="${x}" cy="${y}" r="3.5" fill="${color}"/>`
   if (status === 'done')
-    return `<path d="M${x - 5} ${y}l3.5 3.5 6.5-7" fill="none" stroke="#3B9C5F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
-  return `<path d="M${x - 4} ${y - 4}l8 8M${x + 4} ${y - 4}l-8 8" stroke="#D0453F" stroke-width="1.8" stroke-linecap="round"/>`
+    return `<path d="M${x - 5} ${y}l3.5 3.5 6.5-7" fill="none" stroke="${MARK.done}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+  if (status === 'unknown')
+    return `<circle cx="${x}" cy="${y}" r="3.5" fill="none" stroke="${MARK.unknown}" stroke-width="1.5"/>`
+  return `<path d="M${x - 4} ${y - 4}l8 8M${x + 4} ${y - 4}l-8 8" stroke="${MARK.failed}" stroke-width="1.8" stroke-linecap="round"/>`
 }
+
+// The header tiles' fill on a light and on a dark pane.
+export const TILE = { light: '#f4f3f0', dark: '#262625' }
 
 // The live dot pulses once a second, not every 1.6s as in claude-kit: a running row redraws each
 // second, which restarts the pulse, and a period that divides the second restarts it in phase.
 export const PANE_CSS = `<style>
-.t{fill:#1f1f1f}.s{fill:#6b6b68}.m{fill:#9a9a96}.k{fill:#ecebe8}.ln{stroke:#e4e4e1}.tile{fill:#f4f3f0}
-@media (prefers-color-scheme: dark){.t{fill:#ececec}.s{fill:#a8a8a4}.m{fill:#7d7d79}.k{fill:#2c2c2b}.ln{stroke:#333331}.tile{fill:#262625}}
+.t{fill:#1f1f1f}.s{fill:#6b6b68}.m{fill:#9a9a96}.k{fill:#ecebe8}.ln{stroke:#e4e4e1}.tile{fill:${TILE.light}}
+@media (prefers-color-scheme: dark){.t{fill:#ececec}.s{fill:#a8a8a4}.m{fill:#7d7d79}.k{fill:#2c2c2b}.ln{stroke:#333331}.tile{fill:${TILE.dark}}}
 .live{animation:p 1s ease-in-out infinite}@keyframes p{50%{opacity:.3}}
 @media (prefers-reduced-motion: reduce){.live{animation:none}}
 </style>`
@@ -387,7 +527,7 @@ export type RowArt = {
   title: string
   costume: Costume
   status: AgentStatus
-  /** The model's name, drawn in the costume's colour. */
+  /** The model's name, drawn in the costume's colour (a Kiro row's plain ghost: in its purple). */
   model: string
   /** What follows the model on the second line: " · 1:05". */
   meta: string
@@ -395,13 +535,24 @@ export type RowArt = {
   warning: string
   /** The details mode's extra lines; none in the lean view. */
   details: string[]
+  /** Kiro's rows draw the ghost, a background task's the submarine (no costume); every other row the crab. */
+  species?: Species
 }
 
 export const rowHeight = (r: RowArt): number => 46 + 15 * ((r.warning ? 1 : 0) + r.details.length)
 
-// Crab left, bold title, the model in the costume's colour, the status mark right, a hairline under.
+// Crab or ghost left, bold title, the model in the costume's colour, the status mark right, a hairline under.
 export const agentSvg = (W: number, r: RowArt): string => {
-  const color = colorOf(r.costume)
+  const species = r.species ?? 'crab'
+  const isKiroPurple = isPurple(r.costume, species)
+  const isSub = species === 'sub'
+  const color = markColorOf(r.costume, species)
+  const modelFill = isSub ? 'class="tv"' : isKiroPurple ? 'class="kv"' : `fill="${color}"`
+  const isFailed = r.status === 'failed'
+  const isRunning = r.status === 'running'
+  const figure = isSub
+    ? `${SUB_CSS}${SUB_TEXT_CSS}${sub(0, 6, isFailed, isRunning)}`
+    : `${species === 'ghost' ? GHOST_CSS : ''}${isKiroPurple ? KIRO_TEXT_CSS : ''}${crab(0, 6, r.costume, isFailed, isRunning, CRAB_SCALE, species)}`
   const textW = W - 42 - 22
   const H = rowHeight(r)
   // The time keeps its room: a long model id is cut first, and a meta with no room left is dropped
@@ -421,9 +572,9 @@ export const agentSvg = (W: number, r: RowArt): string => {
   return svg(
     W,
     H,
-    `${r.warning ? WARN_CSS : ''}${crab(0, 6, r.costume, r.status === 'failed', r.status === 'running')}
+    `${r.warning ? WARN_CSS : ''}${figure}
 <text class="t" x="42" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(fit(r.title, textW, 13))}</text>
-<text x="42" y="34" font-family="${FONT}" font-size="11"><tspan fill="${color}">${xml(model)}</tspan>${meta === ELLIPSIS ? '' : `<tspan class="s" font-variant-numeric="tabular-nums">${xml(meta)}</tspan>`}</text>
+<text x="42" y="34" font-family="${FONT}" font-size="11"><tspan ${modelFill}>${xml(model)}</tspan>${meta === ELLIPSIS ? '' : `<tspan class="s" font-variant-numeric="tabular-nums">${xml(meta)}</tspan>`}</text>
 ${lines}
 ${statusMark(W - 8, 16, r.status, color)}
 <line class="ln" x1="0" y1="${H - 0.5}" x2="${W}" y2="${H - 0.5}"/>`,
@@ -520,8 +671,9 @@ ${hasPercent ? `<text class="m" x="${W - CRAB_W - 6}" y="${H / 2 + 4.5}" text-an
 </svg>`
 }
 
-// Terminal fallbacks: the same marks and bars in text.
-export const STATUS_GLYPH: Record<AgentStatus, string> = { running: '●', done: '✓', failed: '✗' }
+// Terminal fallbacks: the same marks and bars in text. A background task's mark is a porthole, not the crab's square.
+export const STATUS_GLYPH: Record<AgentStatus, string> = { running: '●', done: '✓', failed: '✗', unknown: '○' }
+export const FIGURE_GLYPH: Record<Species, string> = { crab: '▣', ghost: '▣', sub: '◒' }
 
 const blocks = (filled: number, width: number): string =>
   '█'.repeat(Math.max(0, Math.min(width, filled))) + '░'.repeat(Math.max(0, width - filled))

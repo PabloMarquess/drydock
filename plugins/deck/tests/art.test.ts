@@ -10,19 +10,33 @@ import {
   crab,
   ctxBar,
   FAILED,
+  FIGURE_GLYPH,
   fit,
+  GHOST_CSS,
   gridSvg,
   gridTiles,
+  hasOwnColour,
   headerSvg,
+  KIRO,
+  MARK,
+  markColorOf,
   PANE_CSS,
   type RowArt,
   rowHeight,
+  STATUS_GLYPH,
+  SUB,
+  SUB_CSS,
   statusMark,
+  sub,
   TIER_COLOR,
+  TILE,
   textWidth,
   WARN,
   xml,
 } from '../hooks/art'
+
+// The pane behind the rows is the host's: white, or near-black in the dark theme. The tiles are the deck's.
+const PANE_BG = { light: '#ffffff', dark: '#1f1e1d' }
 
 const tiles = (svg: string): [string, string, string][] =>
   [...svg.matchAll(/<text class="s"[^>]*>([^<]*)<\/text>\n<text class="(\w)"[^>]*>([^<]*)<\/text>/g)].map((m) => [
@@ -75,6 +89,65 @@ const GOLDEN: Record<string, string> = {
   PANE_CSS: 'e7fd1abb',
 }
 
+// Kiro's ghost in every costume, and the background task's submarine: our own drawings, held here so a
+// change to them is a choice.
+const GHOST_GOLDEN: Record<string, string> = {
+  'ghost fable still': '2fc0c8f0',
+  'ghost fable floating': '9235ba95',
+  'ghost fable dimmed': 'beeecfa4',
+  'ghost heavy still': '55b1a6bb',
+  'ghost heavy floating': 'd52a4426',
+  'ghost heavy dimmed': '69edd767',
+  'ghost careful still': 'ed299fea',
+  'ghost careful floating': '20a5de73',
+  'ghost careful dimmed': 'c6a50626',
+  'ghost medium still': '4cce83ef',
+  'ghost medium floating': '2b192faa',
+  'ghost medium dimmed': 'f018695b',
+  'ghost light still': 'e58f5ee9',
+  'ghost light floating': '964cd47a',
+  'ghost light dimmed': 'a5647765',
+  'ghost explore still': '5406182e',
+  'ghost explore floating': '31fc4deb',
+  'ghost explore dimmed': 'aa0839ea',
+  'ghost other still': '429a18a6',
+  'ghost other floating': 'a3de277f',
+  'ghost other dimmed': '725872b2',
+  'sub still': '6f36a3ef',
+  'sub running': 'd23db086',
+  'sub dimmed': '9fd6dfbb',
+  GHOST_CSS: 'cf691239',
+  SUB_CSS: 'c51f06a3',
+}
+
+const COSTUMES = ['fable', 'heavy', 'careful', 'medium', 'light', 'explore', 'other'] as const
+
+const ownDrawings = (): Record<string, string> => {
+  const out: Record<string, string> = {}
+  for (const c of COSTUMES) {
+    out[`ghost ${c} still`] = crab(0, 6, c, false, false, 1.1, 'ghost')
+    out[`ghost ${c} floating`] = crab(0, 6, c, false, true, 1.1, 'ghost')
+    out[`ghost ${c} dimmed`] = crab(0, 6, c, true, false, 1.1, 'ghost')
+  }
+  out['sub still'] = sub(0, 6)
+  out['sub running'] = sub(0, 6, false, true)
+  out['sub dimmed'] = sub(0, 6, true)
+  out.GHOST_CSS = GHOST_CSS
+  out.SUB_CSS = SUB_CSS
+  return out
+}
+
+// The cells a drawing fills, by its rects' fill: `x,y` on the 30×28 grid.
+const cells = (drawn: string, fill?: string): Set<string> => {
+  const out = new Set<string>()
+  for (const m of drawn.matchAll(/<rect x="(\d+)" y="(\d+)" width="(\d+)" height="(\d+)" fill="([^"]+)"/g)) {
+    if (fill !== undefined && m[5] !== fill) continue
+    const [x, y, w, h] = [m[1], m[2], m[3], m[4]].map(Number) as [number, number, number, number]
+    for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) out.add(`${x + i},${y + j}`)
+  }
+  return out
+}
+
 const drawings = (): Record<string, string> => {
   const out: Record<string, string> = {}
   for (const c of ['fable', 'heavy', 'careful', 'medium', 'light', 'explore', 'other']) {
@@ -121,6 +194,130 @@ describe('art', () => {
   test('the ported drawings match claude-kit exactly', () => {
     const got = Object.fromEntries(Object.entries(drawings()).map(([k, v]) => [k, hash(v)]))
     expect(got).toEqual(GOLDEN)
+  })
+
+  test('our own ghost and submarine draw as recorded, and the crabs did not move a pixel for them', () => {
+    const got = Object.fromEntries(Object.entries(ownDrawings()).map(([k, v]) => [k, hash(v)]))
+    expect(got).toEqual(GHOST_GOLDEN)
+    expect(crab(0, 6, 'heavy', false, true, 1.1, 'crab')).toBe(crab(0, 6, 'heavy', false, true))
+  })
+
+  test("the ghost stands on the crab's footprint: body x7-22 y10-25, nubs where the claws are, no legs", () => {
+    const body = cells(crab(0, 0, 'other', false, false, 1.1, 'ghost'), KIRO.body)
+    const shade = cells(crab(0, 0, 'other', false, false, 1.1, 'ghost'), KIRO.shade)
+    const all = new Set([...body, ...shade])
+    for (let x = 7; x <= 22; x++) for (let y = 10; y <= 23; y++) expect(all.has(`${x},${y}`), `${x},${y}`).toBe(true)
+    for (const c of ['3,15', '6,14', '23,15', '26,16']) expect(all.has(c), c).toBe(true)
+    const xs = [...all].map((c) => Number(c.split(',')[0]))
+    const ys = [...all].map((c) => Number(c.split(',')[1]))
+    expect([Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]).toEqual([3, 26, 8, 25])
+    // Three hem lobes with gaps between them at the bottom.
+    expect(['11,24', '12,24', '17,24', '18,24'].some((c) => all.has(c))).toBe(false)
+    const ghost = crab(0, 0, 'other', false, true, 1.1, 'ghost')
+    expect(ghost).toContain('<g class="c-other ghost run">')
+    expect(ghost).toContain('<g class="la"></g><g class="lb"></g>')
+    expect(cells(ghost, '#1F1E1D').size).toBe(8)
+  })
+
+  test("every costume's hat and prop draw on the ghost as on the crab, only the body differs", () => {
+    for (const c of COSTUMES) {
+      const onCrab = crab(0, 0, c).replace(/<rect[^>]*fill="#D97757"[^>]*\/>|<rect[^>]*fill="#1F1E1D"[^>]*\/>/g, '')
+      const onGhost = crab(0, 0, c, false, false, 1.1, 'ghost').replace(
+        /<rect[^>]*fill="(#8B5CF6|#7C3AED|#1F1E1D)"[^>]*\/>/g,
+        '',
+      )
+      const props = (s: string) => [...s.matchAll(/<rect[^>]*\/>/g)].map((m) => m[0]).sort()
+      const kept = (s: string) => props(s).filter((r) => !/fill="#1F1E1D"/.test(r))
+      expect(kept(onGhost), c).toEqual(kept(onCrab))
+    }
+  })
+
+  test('the ghost floats while it runs, never walks, and stops under reduced motion', () => {
+    expect(GHOST_CSS).toContain('.ghost.run{animation:drift 1s ease-in-out infinite}')
+    expect(GHOST_CSS).toContain('.ghost.run .bd{animation:none}')
+    expect(CRAB_CSS).toContain('@media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}')
+  })
+
+  test('the submarine: hull, portholes, tower and periscope, a propeller of two frames and three bubbles', () => {
+    const still = sub(0, 0)
+    const running = sub(0, 0, false, true)
+    expect(still).toContain('<g class="sub">')
+    expect(running).toContain('<g class="sub run">')
+    expect(sub(0, 0, true)).toContain('opacity="0.45"')
+    expect(cells(still, SUB.port).size).toBe(13)
+    expect(cells(still, SUB.brass).size).toBe(14)
+    expect(running).toContain('<g class="pa">')
+    expect(running).toContain('<g class="pb">')
+    expect(running.match(/<g class="bub b\d">/g)).toHaveLength(3)
+    const all = cells(still)
+    const xs = [...all].map((c) => Number(c.split(',')[0]))
+    const ys = [...all].map((c) => Number(c.split(',')[1]))
+    expect(Math.min(...xs)).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...xs)).toBeLessThan(30)
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(0)
+    expect(Math.max(...ys)).toBeLessThan(28)
+    expect(SUB_CSS).toContain('.sub .pb,.sub .bub{opacity:0}')
+    expect(SUB_CSS).toContain('.sub.run .pa{animation:pa .25s steps(1) infinite}')
+    expect(SUB_CSS).toContain('.sub.run .bub{animation:rise 1s steps(1) infinite}')
+    expect(SUB_CSS).toContain('@media (prefers-reduced-motion: reduce)')
+  })
+
+  test('a Kiro row with no costume colour takes the purple, a task the teal; the terminal marks differ', () => {
+    expect(hasOwnColour('other')).toBe(false)
+    expect(hasOwnColour('explore')).toBe(false)
+    expect(hasOwnColour('heavy')).toBe(true)
+    expect(markColorOf('other', 'ghost')).toBe(KIRO.body)
+    expect(markColorOf('explore', 'ghost')).toBe(KIRO.body)
+    expect(markColorOf('heavy', 'ghost')).toBe(TIER_COLOR.heavy)
+    expect(markColorOf('other', 'crab')).toBe('#888780')
+    expect(markColorOf('fable', 'sub')).toBe(SUB.hull)
+    expect(FIGURE_GLYPH).toEqual({ crab: '▣', ghost: '▣', sub: '◒' })
+    expect(STATUS_GLYPH).toEqual({ running: '●', done: '✓', failed: '✗', unknown: '○' })
+    const kiro = agentSvg(320, row({ costume: 'other', species: 'ghost', model: 'Kiro · claude-opus-5.5' }))
+    expect(kiro).toContain('<tspan class="kv">Kiro · claude-opus-5.5</tspan>')
+    expect(kiro).toContain(`.kv{fill:${KIRO.light}}@media (prefers-color-scheme: dark){.kv{fill:${KIRO.dark}}}`)
+    expect(kiro).toContain(`<circle class="live" cx="312" cy="16" r="3.5" fill="${KIRO.body}"/>`)
+    expect(kiro).toContain('<g class="c-other ghost run">')
+    const dressed = agentSvg(320, row({ costume: 'heavy', species: 'ghost', model: 'Kiro' }))
+    expect(dressed).toContain(`<tspan fill="${TIER_COLOR.heavy}">Kiro</tspan>`)
+    expect(dressed).not.toContain('.kv{')
+    const task = agentSvg(320, row({ costume: 'fable', species: 'sub', model: 'Bash' }))
+    expect(task).toContain('<tspan class="tv">Bash</tspan>')
+    expect(task).toContain('<g class="sub run">')
+    expect(task).not.toContain('class="c-fable')
+    const crabRow = agentSvg(320, row())
+    expect(crabRow).not.toContain('ghost')
+    expect(crabRow).not.toContain('.sub')
+  })
+
+  test('the Kiro and task names read at 4.5:1 or better on a light and on a dark pane', () => {
+    for (const color of [KIRO.light, SUB.light]) {
+      expect(contrast(color, PANE_BG.light), color).toBeGreaterThan(4.5)
+      expect(contrast(color, TILE.light), color).toBeGreaterThan(4.5)
+    }
+    for (const color of [KIRO.dark, SUB.dark]) {
+      expect(contrast(color, PANE_BG.dark), color).toBeGreaterThan(4.5)
+      expect(contrast(color, TILE.dark), color).toBeGreaterThan(4.5)
+    }
+    // The names a row draws are exactly these, in the classes the row's CSS sets per theme.
+    const kiro = agentSvg(320, row({ costume: 'other', species: 'ghost', model: 'Kiro' }))
+    expect(kiro).toContain(`.kv{fill:${KIRO.light}}@media (prefers-color-scheme: dark){.kv{fill:${KIRO.dark}}}`)
+    const task = agentSvg(320, row({ species: 'sub', model: 'Bash' }))
+    expect(task).toContain(`.tv{fill:${SUB.light}}@media (prefers-color-scheme: dark){.tv{fill:${SUB.dark}}}`)
+  })
+
+  test('the marks (live dot, terminal mark, check, cross, ring) read at 3:1 or better on a light and on a dark pane', () => {
+    const marks = [KIRO.body, SUB.hull, MARK.done, MARK.failed, MARK.unknown]
+    for (const color of marks) {
+      expect(contrast(color, PANE_BG.light), color).toBeGreaterThan(3)
+      expect(contrast(color, PANE_BG.dark), color).toBeGreaterThan(3)
+    }
+    expect(statusMark(10, 16, 'done', KIRO.body)).toContain(`stroke="${MARK.done}"`)
+    expect(statusMark(10, 16, 'failed', KIRO.body)).toContain(`stroke="${MARK.failed}"`)
+    expect(statusMark(10, 16, 'unknown', KIRO.body)).toContain(`stroke="${MARK.unknown}"`)
+    expect(statusMark(10, 16, 'running', SUB.hull)).toContain(`fill="${SUB.hull}"`)
+    expect(markColorOf('other', 'ghost')).toBe(KIRO.body)
+    expect(markColorOf('other', 'sub')).toBe(SUB.hull)
   })
 
   test('the grid is stacked from tiles of at most 4096px, its dots aligned', () => {
@@ -188,6 +385,7 @@ describe('art', () => {
       ['general-purpose', 'haiku', 'light'],
       ['general-purpose', 'gpt-x', 'other'],
       ['explore', 'claude-opus-5-5', 'heavy'],
+      ['Kiro', 'claude-opus-5.5', 'other'],
     ]
     for (const [type, model, costume] of cases) expect(costumeOf(type, model), `${type} ${model}`).toBe(costume)
   })
@@ -211,10 +409,13 @@ describe('art', () => {
     expect(crab(0, 0, 'other')).not.toContain('class="it"')
   })
 
-  test('status marks: a live dot, a green check, a red cross', () => {
+  test('status marks: a live dot, a green check, a red cross, a grey ring for an end not seen', () => {
     expect(statusMark(10, 16, 'running', '#D85A30')).toContain('class="live"')
     expect(statusMark(10, 16, 'done', '#D85A30')).toContain('stroke="#3B9C5F"')
     expect(statusMark(10, 16, 'failed', '#D85A30')).toContain('stroke="#D0453F"')
+    expect(statusMark(10, 16, 'unknown', '#D85A30')).toBe(
+      '<circle cx="10" cy="16" r="3.5" fill="none" stroke="#888780" stroke-width="1.5"/>',
+    )
   })
 
   test('a row grows a line for the warning and each detail', () => {
@@ -227,10 +428,10 @@ describe('art', () => {
   })
 
   test('the warning text reaches 4.5:1 on a light and on a dark pane', () => {
-    expect(contrast(WARN.light, '#ffffff')).toBeGreaterThan(4.5)
-    expect(contrast(WARN.light, '#f4f3f0')).toBeGreaterThan(4.5)
-    expect(contrast(WARN.dark, '#1f1e1d')).toBeGreaterThan(4.5)
-    expect(contrast(WARN.dark, '#262625')).toBeGreaterThan(4.5)
+    expect(contrast(WARN.light, PANE_BG.light)).toBeGreaterThan(4.5)
+    expect(contrast(WARN.light, TILE.light)).toBeGreaterThan(4.5)
+    expect(contrast(WARN.dark, PANE_BG.dark)).toBeGreaterThan(4.5)
+    expect(contrast(WARN.dark, TILE.dark)).toBeGreaterThan(4.5)
   })
 
   test('header: Running and Finished, Failed only when one failed, Cost and Time only when given', () => {
@@ -278,8 +479,10 @@ describe('art', () => {
   })
 
   test('the failed count reads at 4.5:1 or better on both tiles', () => {
-    expect(contrast(FAILED.light, '#f4f3f0')).toBeGreaterThan(4.5)
-    expect(contrast(FAILED.dark, '#262625')).toBeGreaterThan(4.5)
+    expect(PANE_CSS).toContain(`.tile{fill:${TILE.light}}`)
+    expect(PANE_CSS).toContain(`.tile{fill:${TILE.dark}}`)
+    expect(contrast(FAILED.light, TILE.light)).toBeGreaterThan(4.5)
+    expect(contrast(FAILED.dark, TILE.dark)).toBeGreaterThan(4.5)
   })
 
   test('the band dither is the same on every redraw and stays under the Svg limit', () => {

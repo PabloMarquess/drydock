@@ -1,7 +1,7 @@
 {
   "name": "deck",
-  "version": "0.3.0",
-  "description": "A row per subagent and workflow agent, Pixel Clawd in a costume for its model, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed and memory), and a dithered progress band above the prompt while they run.",
+  "version": "0.4.0",
+  "description": "A row per subagent, workflow agent, Kiro run (kiro-cli chat) and background task: Pixel Clawd or Kiro's ghost in a costume (random by default), a submarine for background tasks, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed, memory and Kiro's credits), and a dithered progress band above the prompt while they run.",
   "author": {
     "name": "Pablo Marques",
     "url": "https://github.com/PabloMarquess"
@@ -14,7 +14,7 @@
     "autoOpen": {
       "type": "boolean",
       "title": "Open the deck when the first agent starts",
-      "description": "Opens the pane once per session, when the first subagent or workflow agent starts. /deck pane opens it any time.",
+      "description": "Opens the pane once per session, when the first subagent, workflow agent, Kiro run or background task starts. /deck pane opens it any time.",
       "default": true
     },
     "subagentCacheTtl": {
@@ -27,8 +27,20 @@
     "costumes": {
       "type": "string",
       "title": "Costumes",
-      "description": "A costume for every agent (astronaut) or per target (opus=astronaut, haiku=pirate). Costumes: astronaut, detective, engineer, chef, racer, pirate, crab. Targets: all, explore, plan, fable, opus, sonnet, haiku.",
+      "description": "A costume for every agent (astronaut) or per target (opus=astronaut, haiku=pirate, kiro=chef). Costumes: astronaut, detective, engineer, chef, racer, pirate, crab. Targets: all, explore, plan, fable, opus, sonnet, haiku, kiro.",
       "default": ""
+    },
+    "randomCostumes": {
+      "type": "boolean",
+      "title": "Random costumes",
+      "description": "Each agent draws one of the seven costumes from its id when it starts. A costume chosen with /deck costume or the costumes option still wins; /deck costume random on|off changes it for the session.",
+      "default": true
+    },
+    "showTasks": {
+      "type": "boolean",
+      "title": "Show background tasks",
+      "description": "A row for each Bash command run in the background and each Monitor, as a submarine, until it ends. /deck tasks on|off changes it for the session.",
+      "default": true
     }
   }
 }

@@ -18,8 +18,8 @@
     {
       "name": "deck",
       "source": "./plugins/deck",
-      "description": "A row per subagent and workflow agent, Pixel Clawd in a costume for its model, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed and memory), and a dithered progress band above the prompt while they run.",
-      "version": "0.3.0",
+      "description": "A row per subagent, workflow agent, Kiro run (kiro-cli chat) and background task: Pixel Clawd or Kiro's ghost in a costume (random by default), a submarine for background tasks, with running, finished and failed counts, time and a memory warning from 70% (/deck details adds cost, requests, tokens processed, memory and Kiro's credits), and a dithered progress band above the prompt while they run.",
+      "version": "0.4.0",
       "category": "mod"
     },
     {
