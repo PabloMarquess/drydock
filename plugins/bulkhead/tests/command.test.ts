@@ -187,9 +187,29 @@ describe('/bulkhead', () => {
       })
     }
 
+    test(`${surface}: off pauses like pause, on resumes like resume`, async ($, on) => {
+      const world = await start($, on, surface)
+      expect(await bulkhead($, 'OFF')).toContain('paused for this session')
+      expect(world.status).toEqual([BANNER])
+      await bash($, RISKY)
+      expect(world.ran).toEqual([RISKY])
+      expect(await bulkhead($, 'on')).toContain('bulkhead is on')
+      expect(world.status).toEqual([BANNER, undefined])
+      await bash($, RISKY)
+      expect(world.ran).toEqual([RISKY])
+    })
+
+    test(`${surface}: off from a plugin is refused like pause`, async ($, on) => {
+      const world = await start($, on, surface)
+      expect(await bulkhead($, 'off', { kind: 'plugin', name: 'other' })).toContain('Nothing changed')
+      expect(world.status).toEqual([])
+      await bash($, RISKY)
+      expect(world.ran).toHaveLength(0)
+    })
+
     test(`${surface}: an unknown argument shows the usage`, async ($, on) => {
       const world = await start($, on, surface)
-      expect(await bulkhead($, 'off')).toContain('Usage: /bulkhead')
+      expect(await bulkhead($, 'toggle')).toContain('Usage: /bulkhead')
       await bash($, RISKY)
       expect(world.ran).toHaveLength(0)
     })

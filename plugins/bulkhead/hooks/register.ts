@@ -5,7 +5,7 @@ import { type ConfirmStyle, compile, decide, type Extra, judge } from './rules'
 
 const FAILED = 'bulkhead could not check this command, so it was refused. Ask the user to run it.'
 const PAUSED = '⚠ bulkhead paused for this session · /bulkhead resume'
-const USAGE = 'Usage: /bulkhead [pause | resume]. With no argument it shows the guard.'
+const USAGE = 'Usage: /bulkhead [off | on] (or pause | resume). With no argument it shows the guard.'
 const PEOPLE: ReadonlySet<PromptOrigin['kind']> = new Set(['composer', 'sdk', 'bridge'])
 
 const paused = atom({ plugin: 'bulkhead', key: 'paused' } as const, '')
@@ -43,8 +43,9 @@ export const register: Register = (on, options) => {
     const result = await next(e)
     await $.command.register({
       name: 'bulkhead',
-      description: 'Show the command guard; `pause` turns it off for this session, `resume` turns it back on',
-      argumentHint: '[pause|resume]',
+      description:
+        'Show the command guard; `off` (or `pause`) turns it off for this session, `on` (or `resume`) turns it back on',
+      argumentHint: '[off|on]',
       immediate: true,
     })
     if (await isPaused($)) $.ui.status(PAUSED)
@@ -61,7 +62,7 @@ export const register: Register = (on, options) => {
         : 'bulkhead is on.'
       return { text: [state, ...settings(style, extra)].join('\n') }
     }
-    if (arg === 'pause') {
+    if (arg === 'pause' || arg === 'off') {
       if (!PEOPLE.has(e.origin.kind)) {
         return { text: 'Only a /bulkhead pause the person types can pause the guard. Nothing changed.' }
       }
@@ -72,7 +73,7 @@ export const register: Register = (on, options) => {
         text: 'bulkhead paused for this session: commands run unchecked until /bulkhead resume or the session ends.',
       }
     }
-    if (arg === 'resume') {
+    if (arg === 'resume' || arg === 'on') {
       await update($, paused, () => '')
       $.ui.status(undefined)
       return { text: 'bulkhead is on.' }

@@ -54,10 +54,10 @@ Rule ids appear in every refusal, so the one to turn off is always named.
 
 ## Commands
 
-| Command            |                                                                            |
-| ------------------ | -------------------------------------------------------------------------- |
-| `/bulkhead`        | On or paused, the confirm style, custom rule counts and disabled rules     |
-| `/bulkhead pause`  | Turns the guard off for this session; a status line says so while it lasts |
-| `/bulkhead resume` | Turns it back on                                                           |
+| Command         |                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| `/bulkhead`     | On or paused, the confirm style, custom rule counts and disabled rules                         |
+| `/bulkhead off` | Turns the guard off for this session (`pause` works too); a status line says so while it lasts |
+| `/bulkhead on`  | Turns it back on (`resume` works too)                                                          |
 
-Only a `/bulkhead pause` you type (at the prompt, through Remote Control or as the SDK host's own turn) pauses it; one run by a plugin, a scheduled task, a notification or another session is refused. `resume` is taken from anywhere. The pause never outlives the session: it ends with it, `/clear` included. While paused, nothing is refused and nothing asks, and if the guard cannot read whether it is paused it refuses the command.
+Only a `/bulkhead off` you type (at the prompt, through Remote Control or as the SDK host's own turn) pauses it; one run by a plugin, a scheduled task, a notification or another session is refused. `on` is taken from anywhere. The pause never outlives the session: it ends with it, `/clear` included. While paused, nothing is refused and nothing asks, and if the guard cannot read whether it is paused it refuses the command.
