@@ -28,6 +28,12 @@
 /plugin install <mod> --marketplace PabloMarquess/drydock
 ```
 
+Every mod answers `/<mod> on` and `/<mod> off` for the session, and `/<mod>` alone shows its status. To turn a mod off for good, use Claude Code's own `/plugin disable <mod>` (and `/plugin enable <mod>` to bring it back).
+
+## Releases
+
+Each mod is released on its own, with a tag `<mod>--v<version>` and a GitHub release whose notes come from the mod's `CHANGELOG.md`. Versions follow [Semantic Versioning](https://semver.org): while a mod is at 0.x, a `feat` raises the minor version and a `fix` the patch.
+
 ## Develop
 
 Requires Node 24, pnpm and Docker.
@@ -48,10 +54,16 @@ Load a mod from this folder in every session, including the desktop app, through
 
 ## Adding a mod
 
-1. Create `plugins/<mod>/` with `.claude-plugin/plugin.json`, `hooks/`, `types/` and `tests/`.
+1. Create `plugins/<mod>/` with `.claude-plugin/plugin.json`, `hooks/`, `types/`, `tests/`, `README.md` and `CHANGELOG.md`.
 2. List it in `.claude-plugin/marketplace.json` and in the table above.
 3. Load it locally through `CLAUDE_CODE_PLUGIN_DIRS` and try it in a session.
 4. Commit as `feat(<mod>): ...` and push to `main`.
+
+## Releasing a mod
+
+1. Raise `version` in the mod's `plugin.json` and in `.claude-plugin/marketplace.json`, and add the version's entry to its `CHANGELOG.md`.
+2. Commit as `chore(<mod>): release v<version>` and push to `main`.
+3. `pnpm exec claude plugin tag plugins/<mod> --push` tags `<mod>--v<version>`; the release workflow then publishes the GitHub release from the changelog entry.
 
 ## Checks
 
