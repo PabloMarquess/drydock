@@ -1,28 +1,8 @@
-import type { On } from 'claude-code'
-import type { Engine } from 'claude-code/testing'
-import { describe, expect, mock, test } from 'claude-code/testing'
+import { describe, expect, test } from 'claude-code/testing'
 
-type World = { ran: string[]; checks: string[] }
+import { bash, COMMIT, engine } from './support'
 
-const engine = (on: On): World => {
-  const world: World = { ran: [], checks: [] }
-  mock.env(on, { HOME: '/home/dev' })
-  on('session.root', () => ({ value: '/home/dev/work/infra' }))
-  on('session.cwd', () => ({ value: '/home/dev/work/infra' }))
-  on('tool.check', (_$, e) => {
-    world.checks.push(String((e.input as { command?: unknown }).command))
-    return { decision: 'allow' }
-  })
-  on('tool.call', { tool: 'Bash' }, (_$, e) => {
-    world.ran.push(String(e.command))
-    return { result: { stdout: 'ok', stderr: '', interrupted: false } } as never
-  })
-  return world
-}
-
-const bash = ($: Engine, command: string) => $.tool.call({ tool: 'Bash', command } as never)
-
-describe('bulkhead', () => {
+describe('the Bash hook', () => {
   test('a catastrophic command never reaches the shell', async ($, on) => {
     const world = engine(on)
     const result = await bash($, 'terraform destroy -auto-approve')
@@ -38,15 +18,23 @@ describe('bulkhead', () => {
 
   test('a risky command is refused for a person by default', async ($, on) => {
     const world = engine(on)
-    const result = await bash($, 'kubectl delete pod web-1')
+    const text = JSON.stringify(await bash($, 'kubectl delete pod web-1'))
     expect(world.ran).toHaveLength(0)
-    expect(JSON.stringify(result)).toContain('Needs a person')
+    expect(text).toContain('Needs a person')
+    expect(text).toContain('kubectl-change')
+    expect(text).not.toContain('Permission to use Bash')
   })
 
   test('a harmless command runs untouched', async ($, on) => {
     const world = engine(on)
     await bash($, 'kubectl get pods')
     expect(world.ran).toEqual(['kubectl get pods'])
+  })
+
+  test('the usual commit heredoc reaches the shell', async ($, on) => {
+    const world = engine(on)
+    await bash($, COMMIT)
+    expect(world.ran).toEqual([COMMIT])
   })
 
   test(
@@ -58,6 +46,19 @@ describe('bulkhead', () => {
       expect(world.ran).toHaveLength(0)
       expect(JSON.stringify(result)).toContain('Permission to use Bash has been denied')
       expect(world.checks).toEqual(['kubectl delete pod web-1'])
+    },
+  )
+
+  test(
+    'concurrent calls with confirmStyle ask refuse each risky command and run the rest',
+    { options: { confirmStyle: 'ask' } },
+    async ($, on) => {
+      const world = engine(on)
+      const commands = ['kubectl delete pod a', 'ls', 'helm uninstall x', 'git status', 'kubectl delete pod b']
+      const results = await Promise.all(commands.map((command) => bash($, command)))
+      expect(world.ran.sort()).toEqual(['git status', 'ls'])
+      expect(JSON.stringify(results[0])).toContain('Do not rewrite the command')
+      expect(JSON.stringify(results[2])).toContain('helm-remove')
     },
   )
 

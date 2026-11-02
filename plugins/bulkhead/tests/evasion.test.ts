@@ -1,106 +1,215 @@
-import { describe, expect, test } from 'claude-code/testing'
+import { describe } from 'claude-code/testing'
 
-import { type Extra, judge } from '../hooks/rules'
+import { type Case, table } from './support'
 
-const HOME = '/home/dev'
-const ROOT = '/home/dev/work/infra'
-const NONE: Extra = { block: [], confirm: [], disabled: new Set() }
+const B = 'block:rm-outside-project'
+const K = 'block:kubectl-mass-delete'
+const T = 'block:terraform-auto-destroy'
+const M = 'block:git-force-push-main'
+const D = 'confirm:git-discard'
 
-const verdict = (command: string) => {
-  const v = judge(command, ROOT, ROOT, HOME, NONE)
-  return v === null ? 'pass' : `${v.level}:${v.id}`
+const GROUPS: Record<string, Case[]> = {
+  'quoting inside a word': [
+    ["'t'erraform destroy -auto-approve", T],
+    ["terraform des'troy' -auto-approve", T],
+    ["terraform destroy '-auto-approve'", T],
+    ['terraform "destroy" -auto-approve', T],
+    ["kubectl de'lete' ns prod", K],
+    ['kubectl "delete" ns prod', K],
+    ["gi't' push -f origin main", M],
+    ["git push origin '+main'", M],
+    ['git push -f origin "main"', M],
+    ['helm "uninstall" web', 'confirm:helm-remove'],
+    ["aws s3 rm s3://b '--recursive'", 'block:aws-mass-delete'],
+    ['aws ec2 "terminate-instances" --instance-ids i-1', 'confirm:aws-delete'],
+    ['\\rm -rf /home/dev/other', B],
+    ["r'm' -rf /home/dev/other", B],
+  ],
+  'terraform flag forms': [
+    ['terraform destroy --auto-approve', T],
+    ['terraform destroy --auto-approve=true', T],
+    ['terraform apply --destroy --auto-approve', T],
+    ['terraform apply -destroy -auto-approve', T],
+    ['TF_CLI_ARGS_destroy=-auto-approve terraform destroy', T],
+    ['TF_CLI_ARGS="-auto-approve" terraform destroy', T],
+    ['terraform destroy <<< yes', T],
+    ['echo yes | terraform destroy', T],
+    ['yes | terraform destroy', T],
+    ['terragrunt run-all destroy -auto-approve', T],
+    ['terragrunt run-all destroy --terragrunt-non-interactive', T],
+    ['terragrunt run --all destroy --non-interactive', T],
+  ],
+  'kubectl and helm forms': [
+    ['kubectl delete --namespace prod ns x', K],
+    ['kubectl delete -n prod namespace x', K],
+    ['kubectl delete deploy,ns prod', K],
+    ['kubectl delete Namespace prod', K],
+    ['kubectl delete NS prod', K],
+    ['kubectl delete namespace/prod', K],
+    ['kubectl apply --prune --all -f dir/', 'confirm:kubectl-change'],
+    ['kubectl taint nodes --all key=value:NoExecute', 'confirm:kubectl-change'],
+    ['helm del web', 'confirm:helm-remove'],
+    ['helm un web', 'confirm:helm-remove'],
+    ['helmfile destroy', 'confirm:helm-remove'],
+    ['helmfile -e prod destroy', 'confirm:helm-remove'],
+  ],
+  'flags between a tool and its subcommand': [
+    ['kubectl -n app delete ns prod', K],
+    ['kubectl -A delete pods --all', K],
+    ['kubectl --context "my ctx" delete ns prod', K],
+    ['helm --kube-context prod uninstall web', 'confirm:helm-remove'],
+    ['aws --profile prod ec2 terminate-instances --instance-ids i-1', 'confirm:aws-delete'],
+    ['aws ec2 --region us-east-1 terminate-instances --instance-ids i-1', 'confirm:aws-delete'],
+    ['git --no-pager push -f origin master', M],
+    ['git -C "my repo" push -f origin main', M],
+  ],
+  'only the last unquoted --dry-run counts': [
+    ['kubectl delete pods --all -n app --dry-run=none', K],
+    ['kubectl delete ns prod --dry-run=server --dry-run=none', K],
+    ["kubectl delete ns prod ' --dry-run=client'", K],
+  ],
+  'aliases the shell snapshot defines': [
+    ['k delete ns prod', K],
+    ['kdelns prod', K],
+    ['gpf! origin main', M],
+    ['gpf origin main', M],
+    ['gpod main', 'confirm:git-delete-remote'],
+    ['grhh', D],
+    ['gpristine', D],
+    ['gwipe', D],
+    ['gbD feat/x', D],
+  ],
+  'aws operations': [
+    [
+      'aws rds delete-db-instance --cli-input-json \'{"DBInstanceIdentifier":"db","SkipFinalSnapshot":true}\'',
+      'block:aws-mass-delete',
+    ],
+    ['aws kms schedule-key-deletion --key-id k', 'confirm:aws-delete'],
+    ['aws kms schedule-key-deletion --key-id k --pending-window-in-days 7', 'confirm:aws-delete'],
+    ['aws ecr batch-delete-image --repository-name r --image-ids imageTag=x', 'confirm:aws-delete'],
+    ['aws ecr batch-delete-image --repository-name r --image-ids imageTag=latest', 'confirm:aws-delete'],
+    ['aws organizations leave-organization', 'confirm:aws-delete'],
+  ],
+  'git push forms': [
+    ['git push -uf origin main', M],
+    ['git push -fu origin main', M],
+    ['git push -f origin HEAD:main', M],
+    ['git push --force origin refs/heads/main', M],
+    ['git push --mirror', M],
+    ['git push --mirror origin', M],
+    ['git push --prune origin', 'confirm:git-delete-remote'],
+  ],
+  'git discards': [
+    ['git clean --force -d', D],
+    ['git clean -d --force', D],
+    ['git branch --delete --force feat/x', D],
+    ['git branch -d -f feat/x', D],
+    ['git branch -df feat/x', D],
+    ['git checkout -f main', D],
+    ['git switch -f main', D],
+    ['git switch --discard-changes main', D],
+    ['git checkout HEAD -- .', D],
+    ['git restore -SW .', D],
+    ['git restore -S -W .', D],
+    ['git restore --source=HEAD --staged --worktree .', D],
+    ['git restore :/', D],
+    ['git restore -S .', 'pass'],
+    ['git stash clear', D],
+    ['git stash drop', D],
+    ['git update-ref -d refs/heads/main', D],
+    ['git reflog expire --expire=now --all && git gc --prune=now', D],
+  ],
+  'shells, interpreters and wrappers': [
+    ['bash -c "rm -rf /home/dev"', B],
+    ["sh -c 'rm -rf /home/dev'", B],
+    ['bash -lc "rm -rf \'/home/dev\'"', B],
+    ['sh -c \'rm -rf "/home/dev"\'', B],
+    ['eval "rm -rf /home/dev"', B],
+    ["sh -c 'kubectl delete ns prod'", K],
+    ['eval "aws s3 rb s3://b --force"', 'block:aws-mass-delete'],
+    ["echo 'terraform destroy -auto-approve' | sh", T],
+    ["printf 'kubectl delete ns prod\\n' | xargs -I{} sh -c '{}'", K],
+    ["printf 'kubectl delete ns prod' | sed e", K],
+    ["echo 'terraform destroy -auto-approve' | at now", T],
+    ['echo "$(terraform destroy -auto-approve)"', T],
+    ["$(echo 'terraform destroy -auto-approve')", T],
+    ["x=$(echo 'kubectl delete ns prod'); $x", K],
+    ["git -c alias.nuke='!terraform destroy -auto-approve' nuke", T],
+    ["git -c core.editor='terraform destroy -auto-approve' commit", T],
+    ['git -c "core.fsmonitor=kubectl delete ns prod" commit -m x', K],
+    ['ssh bastion "kubectl delete ns prod"', K],
+    ['python3 -c \'import os; os.system("terraform destroy -auto-approve")\'', T],
+    ["watch -n 60 'kubectl delete pod --all -n app'", K],
+    ['aws-vault exec prod -- aws ec2 terminate-instances --instance-ids i-1', 'confirm:aws-delete'],
+    ['docker run --rm -v $PWD:/w hashicorp/terraform:1.9 destroy -auto-approve', T],
+  ],
+  'heredocs and scripts that run': [
+    ["bash <<'EOF'\nterraform destroy -auto-approve\nEOF", T],
+    ["cat <<'EOF' | sh\nkubectl delete ns prod\nEOF", K],
+    ['bash -c "$(cat <<\'EOF\'\nterraform destroy -auto-approve\nEOF\n)"', T],
+    ['cat > f <<EOF\n$(terraform destroy -auto-approve)\nEOF', T],
+    ["echo 'terraform destroy -auto-approve' > x.sh && chmod +x x.sh && ./x.sh", T],
+    ["cat <<'EOF' > x.sh\nkubectl delete ns prod\nEOF\n. x.sh", K],
+    ["kubectl apply -f - <<'EOF'\nkind: Namespace\nEOF\nkubectl delete ns prod", K],
+  ],
+  'tokenizer edge cases that must not hide a command': [
+    ['git commit -m "x" ; kubectl delete ns prod', K],
+    ['echo a #comment\nkubectl delete ns prod', K],
+    ['echo "<<EOF"\nkubectl delete ns prod\nEOF', K],
+    ['terraform destroy>tf.log -auto-approve', T],
+    ["echo \\$'\\' ; kubectl delete ns prod ; echo \\$'\\'", K],
+    ["echo $'it\\'s' ; kubectl delete ns prod", K],
+    ['echo ` # x` ; kubectl delete ns prod', K],
+    ['cat <<E"OF"\nEOF\nkubectl delete ns prod\nE', K],
+    [
+      'git commit -m "$(cat <<\'EOF\'\nmsg\nEOF\necho)" ; kubectl delete ns prod ; echo "$(cat <<\'EOF\'\nx\nEOF\n)"',
+      K,
+    ],
+    ["echo '\"$(cat <<'EOF'\nx'\nkubectl delete ns prod\necho '\nEOF\n)\"'", K],
+    ["x=$(echo 'kubectl delete ns prod') $[1<<2]\n$x\n2", K],
+  ],
+  'quotes nest inside "$(...)"': [
+    ['git commit -m "$(echo "x"; rm -rf ~)"', B],
+    ['echo "$(true "a"; terraform destroy -auto-approve)"', T],
+    ['git commit -m "$(echo "x"; kubectl delete ns prod)"', K],
+    ['echo "`echo "x"; kubectl delete ns prod`"', K],
+  ],
+  '${...} and $[...] are one word': [
+    [`echo "$\{x:-"'"}"; rm -rf ~; echo '\\'`, B],
+    [`echo "$\{x:-"'"}"; kubectl delete ns prod; echo '\\'`, K],
+    [`echo $\{x:- #}; rm -rf ~`, B],
+    [`echo $\{x:- #}; terraform destroy -auto-approve`, T],
+    [`echo $\{x:-<<EOF }\nrm -rf ~\nEOF`, B],
+    ['echo $[1<<EOF ]\nrm -rf ~\nEOF', B],
+  ],
+  "$$'...' is $$ and a plain quote": [["echo $$'\\'; rm -rf ~; echo '\\'", B]],
+  'git runs the value of an alias or editor': [
+    ["git -c alias.x='!rm -rf ~' x", B],
+    ["git -c core.editor='rm -rf ~' commit", B],
+  ],
+  'backticks that are only text': [
+    ["git commit -m 'docs: explain `kubectl delete ns` guard'", 'pass'],
+    ["gh pr create --title 'x' --body 'blocks `terraform destroy -auto-approve`'", 'pass'],
+    ['git commit -m "docs: explain \\`kubectl delete ns\\` guard"', 'pass'],
+    ['git commit -m "`kubectl delete ns prod`"', K],
+    ['git commit -m "\\\\`kubectl delete ns prod`"', K],
+    ['git commit -m "$(kubectl delete ns prod)"', K],
+    ["echo 'kubectl delete ns `x`' | sh", K],
+    ["git commit -m 'x `' ; kubectl delete ns prod ; echo '` y'", K],
+    ['echo "$(date)" ; rm -rf ~', B],
+  ],
+  'heredocs written next to mkdir, chmod or touch': [
+    ["mkdir -p docs && cat > docs/teardown.md <<'EOF'\n# Teardown\nkubectl delete namespace staging\nEOF", 'pass'],
+    [
+      "mkdir -p .github/workflows && cat > .github/workflows/destroy.yml <<'EOF'\n      - run: terraform destroy -auto-approve\nEOF",
+      'pass',
+    ],
+    ["cat > scripts/clean.sh <<'EOF'\nrm -rf /var/lib/app/cache\nEOF\nchmod +x scripts/clean.sh", 'pass'],
+    ["mkdir -p x && bash <<'EOF'\nterraform destroy -auto-approve\nEOF", T],
+    ["mkdir -p x && cat <<'EOF' | sh\nkubectl delete ns prod\nEOF", K],
+    ["echo 'kubectl delete ns prod' > x.sh && chmod +x x.sh && ./x.sh", K],
+    ["touch x && eval 'kubectl delete ns prod'", K],
+  ],
 }
 
-const BYPASSES: [string, string][] = [
-  // quoting inside a word
-  ["'t'erraform destroy -auto-approve", 'block:terraform-auto-destroy'],
-  ["terraform des'troy' -auto-approve", 'block:terraform-auto-destroy'],
-  ["terraform destroy '-auto-approve'", 'block:terraform-auto-destroy'],
-  ["kubectl de'lete' ns prod", 'block:kubectl-mass-delete'],
-  ["git push origin '+main'", 'block:git-force-push-main'],
-  ["aws s3 rm s3://b '--recursive'", 'block:aws-mass-delete'],
-  // terraform flag forms
-  ['terraform destroy --auto-approve', 'block:terraform-auto-destroy'],
-  ['terraform apply --destroy --auto-approve', 'block:terraform-auto-destroy'],
-  ['TF_CLI_ARGS_destroy=-auto-approve terraform destroy', 'block:terraform-auto-destroy'],
-  ['echo yes | terraform destroy', 'block:terraform-auto-destroy'],
-  ['terraform destroy <<< yes', 'block:terraform-auto-destroy'],
-  ['terragrunt run-all destroy --terragrunt-non-interactive', 'block:terraform-auto-destroy'],
-  // kubectl / helm
-  ['kubectl delete --namespace prod ns x', 'block:kubectl-mass-delete'],
-  ['kubectl delete -n prod namespace x', 'block:kubectl-mass-delete'],
-  ['kubectl delete deploy,ns prod', 'block:kubectl-mass-delete'],
-  ['kubectl delete Namespace prod', 'block:kubectl-mass-delete'],
-  ['kubectl apply --prune --all -f dir/', 'confirm:kubectl-change'],
-  ['helm del web', 'confirm:helm-remove'],
-  ['helm un web', 'confirm:helm-remove'],
-  ['helmfile destroy', 'confirm:helm-remove'],
-  // aliases the user's shell snapshot defines (oh-my-zsh git + kubectl)
-  ['k delete ns prod', 'block:kubectl-mass-delete'],
-  ['kdelns prod', 'block:kubectl-mass-delete'],
-  ['gpf! origin main', 'block:git-force-push-main'],
-  ['grhh', 'confirm:git-discard'],
-  ['gpristine', 'confirm:git-discard'],
-  // aws
-  [
-    'aws rds delete-db-instance --cli-input-json \'{"DBInstanceIdentifier":"db","SkipFinalSnapshot":true}\'',
-    'block:aws-mass-delete',
-  ],
-  ['aws kms schedule-key-deletion --key-id k', 'confirm:aws-delete'],
-  ['aws ecr batch-delete-image --repository-name r --image-ids imageTag=x', 'confirm:aws-delete'],
-  // git
-  ['git push -uf origin main', 'block:git-force-push-main'],
-  ['git push --mirror', 'block:git-force-push-main'],
-  ['git clean --force -d', 'confirm:git-discard'],
-  ['git branch --delete --force feat/x', 'confirm:git-discard'],
-  ['git branch -df feat/x', 'confirm:git-discard'],
-  ['git switch --discard-changes main', 'confirm:git-discard'],
-  ['git stash clear', 'confirm:git-discard'],
-  // rm
-  ['bash -c "rm -rf /home/dev"', 'block:rm-outside-project'],
-  ["sh -c 'rm -rf /home/dev'", 'block:rm-outside-project'],
-  ['eval "rm -rf /home/dev"', 'block:rm-outside-project'],
-  ['\\rm -rf /home/dev/other', 'block:rm-outside-project'],
-  ['rm -rf "/home/dev/my docs"', 'block:rm-outside-project'],
-  ['rm --recur /home/dev/other', 'block:rm-outside-project'],
-  ['rm -rf ~root', 'block:rm-outside-project'],
-  ['rm -rf ~dev', 'block:rm-outside-project'],
-  ['rm -rf {/home/dev,x}', 'block:rm-outside-project'],
-  ['cd / && rm -rf *', 'block:rm-outside-project'],
-  ['cd /home/dev && rm -rf work', 'block:rm-outside-project'],
-  ["bash -c 'cd / && rm -rf home'", 'block:rm-outside-project'],
-  ['rm -rf *', 'confirm:rm-project'],
-  ['rm -rf "$(dirname $PWD)"', 'confirm:rm-unresolved'],
-  ['xargs rm -rf < list.txt', 'confirm:rm-unresolved'],
-  ['find / -delete', 'block:rm-outside-project'],
-  ['find / -name x -exec rm -rf {} \\;', 'block:rm-outside-project'],
-]
-
-const HARMLESS = [
-  'git checkout -b feat/x',
-  'git restore --staged .',
-  'git branch -d feat/x',
-  'git push -u origin feat/x',
-  'git push --follow-tags origin feat/x',
-  'helm upgrade --install web ./chart -n app',
-  'rm -rf node_modules/*',
-  'cd src && rm -rf build',
-  "find . -name '*.pyc' -delete",
-  'k get pods',
-  'tf plan',
-  'terragrunt run-all plan --terragrunt-non-interactive',
-  'kubectl taint nodes n1 key=value:NoSchedule',
-]
-
-describe('evasion', () => {
-  for (const [command, expected] of BYPASSES) {
-    test(command, () => {
-      expect(verdict(command)).toBe(expected)
-    })
-  }
-  for (const command of HARMLESS) {
-    test(`harmless: ${command}`, () => {
-      expect(verdict(command)).toBe('pass')
-    })
-  }
-})
+for (const [name, cases] of Object.entries(GROUPS)) describe(name, () => table(cases))
