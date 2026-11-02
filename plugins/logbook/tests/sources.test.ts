@@ -12,7 +12,7 @@ import {
   tokensOf,
   webLabel,
 } from '../hooks/sources'
-import { groupsOf, summaryOf, tokensText, topOf } from '../hooks/summary'
+import { groupsOf, lineOf, summaryOf, tokensText, topOf } from '../hooks/summary'
 import type { Entry, SourceKind } from '../types'
 
 const entry = (kind: SourceKind, label: string, tokens = 0, extra: Partial<Entry> = {}): Entry => ({
@@ -261,6 +261,13 @@ describe('text', () => {
     expect(skillSource('mcp', undefined)).toBe('mcp')
     expect(skillSource('constructor', undefined)).toBe('constructor')
   })
+
+  test("a skill's source and its plugin's name are redacted, as every label is", () => {
+    expect(skillSource('plugin', FAKE.aws)).toBe('plugin …')
+    expect(skillSource('plugin', `tools ${FAKE.github}`)).toBe('plugin tools …')
+    expect(skillSource(FAKE.openai, undefined)).toBe('…')
+    expect(skillSource('plugin\u202Etools', undefined)).toBe('plugin tools')
+  })
 })
 
 describe('summary', () => {
@@ -277,6 +284,21 @@ describe('summary', () => {
     expect(summaryOf(turn, false)).toBe(
       '⚓ logbook · skill finops-custos · datadog ×3 · 6 files · 1 web · ≈42k tokens in',
     )
+  })
+
+  test('the line under a reply ends pointing to the pane, a long one too', () => {
+    expect(lineOf(turn, false)).toBe(
+      '⚓ logbook · skill finops-custos · datadog ×3 · 6 files · 1 web · ≈42k tokens in · /logbook pane',
+    )
+    const many = Array.from({ length: 300 }, (_, i) => entry('file', `dir/file-${i}.ts`, 10))
+    const long = lineOf(many, true)
+    expect(long.endsWith('… · /logbook pane')).toBe(true)
+    expect([...long]).toHaveLength(1500)
+  })
+
+  test('a turn with no new sources has no pointer to the pane', () => {
+    expect(lineOf([], false)).toBe('⚓ logbook · no new sources')
+    expect(lineOf([], true)).toBe('⚓ logbook · no new sources')
   })
 
   test('details list every source', () => {

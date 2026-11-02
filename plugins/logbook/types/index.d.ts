@@ -48,6 +48,13 @@ export type Agent = {
   isAwaited: boolean
 }
 
+/**
+ * What the pane draws expanded, by key: a group by its turn, loop and kind (`t3-main-shell`, a subagent's
+ * `t3-a:<id>-file`), a whole turn by its own (`t3`, from `expand all`). A group's own choice wins over its
+ * turn's; absent, it draws as its turn says, else collapsed. A choice equal to that is not kept.
+ */
+export type Expanded = Record<string, boolean>
+
 declare module 'claude-code' {
   interface PluginState {
     logbook: {
@@ -68,6 +75,8 @@ declare module 'claude-code' {
       isOff: boolean
       /** `/logbook details`: the per-turn line lists every source instead of counts. */
       isDetails: boolean
+      /** The pane's groups the person expanded or collapsed, the latest 100 choices; a press, a turn taking the waiting sources, and a clear write it. */
+      expanded: Expanded
     }
   }
 }

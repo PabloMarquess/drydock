@@ -158,10 +158,11 @@ const SKILL_SOURCES = new Map([
   ['syncedSkills', 'synced'],
 ])
 
+/** Where a skill comes from: `user`, `project`, `plugin <name>`; redacted, as every label is. */
 export const skillSource = (source: unknown, pluginName: unknown): string => {
-  const plugin = clean(pluginName, 40)
+  const plugin = safe(pluginName, 40)
   if (plugin) return `plugin ${plugin}`
-  const s = clean(source, 40)
+  const s = safe(source, 40)
   return SKILL_SOURCES.get(s) ?? s
 }
 

@@ -3,11 +3,12 @@ import type { Entry, SourceKind } from '../types'
 const KINDS: readonly SourceKind[] = ['skill', 'mcp', 'file', 'web', 'agent', 'shell', 'instructions', 'other']
 
 const PREFIX = '⚓ logbook'
+const HINT = ' · /logbook pane'
 const MAX_LINE = 1500
 const MAX_SKILLS = 3
 const MAX_SERVERS = 4
 
-type Item = { label: string; count: number; failed: number; tokens: number }
+export type Item = { label: string; detail: string; count: number; failed: number; tokens: number }
 export type Group = { kind: SourceKind; count: number; tokens: number; items: Item[] }
 
 // Thresholds sit where rounding would carry into the next unit: 999_600 reads 1.0M, never 1000k.
@@ -24,21 +25,26 @@ const itemLabel = (e: Entry): string =>
   e.kind === 'agent' && e.detail && e.detail !== e.label ? `${e.label} (${e.detail})` : e.label
 
 export const groupsOf = (entries: readonly Entry[]): Group[] => {
-  const groups = new Map<SourceKind, Group>()
+  const groups = new Map<SourceKind, { group: Group; byLabel: Map<string, Item> }>()
   for (const e of entries) {
-    const group = groups.get(e.kind) ?? { kind: e.kind, count: 0, tokens: 0, items: [] }
-    groups.set(e.kind, group)
+    const found = groups.get(e.kind) ?? { group: { kind: e.kind, count: 0, tokens: 0, items: [] }, byLabel: new Map() }
+    groups.set(e.kind, found)
+    const { group, byLabel } = found
     group.count += 1
     group.tokens += e.tokens
     const label = itemLabel(e)
-    const item = group.items.find((i) => i.label === label)
+    const item = byLabel.get(label)
     if (item) {
       item.count += 1
       item.failed += e.isFailed ? 1 : 0
       item.tokens += e.tokens
-    } else group.items.push({ label, count: 1, failed: e.isFailed ? 1 : 0, tokens: e.tokens })
+    } else {
+      const added = { label, detail: e.detail, count: 1, failed: e.isFailed ? 1 : 0, tokens: e.tokens }
+      byLabel.set(label, added)
+      group.items.push(added)
+    }
   }
-  return KINDS.flatMap((k) => groups.get(k) ?? [])
+  return KINDS.flatMap((k) => groups.get(k)?.group ?? [])
 }
 
 export const itemsText = (items: readonly Item[]): string =>
@@ -105,24 +111,33 @@ const detailParts = (g: Group): string[] => {
   return [`${KIND_WORD[g.kind]} ${itemsText(g.items)}`]
 }
 
-const bounded = (line: string): string => {
+const bounded = (line: string, max: number): string => {
   const chars = [...line]
-  return chars.length <= MAX_LINE ? line : `${chars.slice(0, MAX_LINE - 1).join('')}…`
+  return chars.length <= max ? line : `${chars.slice(0, max - 1).join('')}…`
 }
 
 /**
  * One line for a turn: its sources by kind (or every source, with details), then the tokens they brought
  * into the main conversation and, apart, the tokens the subagents read for themselves.
  */
-export const summaryOf = (entries: readonly Entry[], isDetails: boolean): string => {
+export const summaryOf = (entries: readonly Entry[], isDetails: boolean, max = MAX_LINE): string => {
   if (entries.length === 0) return `${PREFIX} · no new sources`
   const parts = groupsOf(entries).flatMap((g) => (isDetails ? detailParts(g) : countParts(g)))
   const main = sumTokens(entries.filter((e) => e.agentId === null))
   const inside = sumTokens(entries.filter((e) => e.agentId !== null))
   if (main > 0) parts.push(`≈${tokensText(main)} tokens in`)
   if (inside > 0) parts.push(`≈${tokensText(inside)} inside agents`)
-  return bounded([PREFIX, ...parts].join(' · '))
+  return bounded([PREFIX, ...parts].join(' · '), max)
 }
+
+/**
+ * The line under a turn's reply, at most 1500 characters: its summary, then where each group's sources are
+ * listed. A turn with no new sources has nothing to list there.
+ */
+export const lineOf = (entries: readonly Entry[], isDetails: boolean): string =>
+  entries.length === 0
+    ? summaryOf(entries, isDetails)
+    : `${summaryOf(entries, isDetails, MAX_LINE - [...HINT].length)}${HINT}`
 
 const topKey = (e: Entry): string => {
   switch (e.kind) {

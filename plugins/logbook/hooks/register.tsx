@@ -1,9 +1,11 @@
 import type { EngineInterface, InstructionFile, PromptOrigin, Register, ToolCallResult } from 'claude-code'
 import { atom, read, update } from 'claude-code'
 
-import type { Agent, Entry, Log, SourceKind, Turn } from '../types'
+import type { Agent, Entry, Log, Turn } from '../types'
+import { allSet, toggled } from './expanded'
+import { drawPane } from './pane'
 import { classify, clean, isSameSkill, type Source, safe, shortPath, skillName, skillSource, tokensOf } from './sources'
-import { type Group, groupsOf, itemsText, KIND_WORD, plural, summaryOf, sumTokens, tokensText, topOf } from './summary'
+import { lineOf, plural, tokensText, topOf } from './summary'
 
 const PANE = 'logbook'
 const TITLE = 'Logbook'
@@ -23,7 +25,7 @@ const USAGE = 'Usage: /logbook [on|off|pane|details|clear|help]. /logbook help e
 const HELP = [
   '/logbook: status on one line.',
   '/logbook on | off: resume or stop recording and the per-turn line, for this session.',
-  '/logbook pane: show or hide the timeline.',
+  '/logbook pane: show or hide the timeline; press a group to list its sources, `expand all` to open a turn.',
   '/logbook details: the per-turn line lists every source instead of counts.',
   '/logbook clear: empty the log; the turn in progress keeps recording.',
 ].join('\n')
@@ -37,6 +39,7 @@ const AGENTS = { plugin: 'logbook', key: 'agents' } as const
 const RECORDED = { plugin: 'logbook', key: 'recorded' } as const
 const INSTRUCTIONS = { plugin: 'logbook', key: 'instructions' } as const
 const FOREIGN = { plugin: 'logbook', key: 'foreign' } as const
+const EXPANDED = { plugin: 'logbook', key: 'expanded' } as const
 const EMPTY_LOG: Log = { turns: [], open: null, last: 0, inTurn: false }
 
 const log = atom(LOG, EMPTY_LOG)
@@ -47,21 +50,9 @@ const instructions = atom(INSTRUCTIONS, {})
 const foreign = atom(FOREIGN, [])
 const isOff = atom({ plugin: 'logbook', key: 'isOff' } as const, false)
 const isDetails = atom({ plugin: 'logbook', key: 'isDetails' } as const, false)
+const expanded = atom(EXPANDED, {})
 
 const slotId = (index: number): string => String(index % MAX_TURNS)
-
-const PANE_WORD: Record<SourceKind, string> = { ...KIND_WORD, instructions: 'instr' }
-
-const KIND_COLOR: Record<SourceKind, string> = {
-  skill: 'claude',
-  mcp: 'permission',
-  file: 'ide',
-  web: 'suggestion',
-  agent: 'merged',
-  shell: 'bashBorder',
-  instructions: 'remember',
-  other: 'inactive',
-}
 
 /** Where a source lands: a turn (null while none is open) and the loop that used it; `moved`, its agent to re-anchor there. */
 type Place = { turn: number | null; agentId: string | null; moved?: Agent }
@@ -103,13 +94,6 @@ const TAG = /<\/?[A-Za-z][\w:-]*(?:\s+[\w:-]+="[^"]*")*\s*\/?>/g
 const titleOf = (text: string): string => {
   const words = clean(text.slice(0, 2000).replace(TAG, ' '), 2000).split(' ').filter(Boolean)
   return safe(words.slice(0, TITLE_WORDS).join(' '), MAX_TITLE) || '(continued)'
-}
-
-const pad = (n: number): string => String(n).padStart(2, '0')
-
-const clockOf = (at: number): string => {
-  const d = new Date(at)
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 const entryOf = (place: Place, source: Source, tokens: number, isFailed = false): Entry => ({
@@ -191,7 +175,10 @@ const readTurns = async ($: EngineInterface, indexes: readonly number[]): Promis
   return found.filter((t, k): t is Turn => kept(t, indexes[k] ?? -1))
 }
 
-// Gives the next number to a new turn, which takes the sources waiting for one.
+const isWaitingKey = (key: string): boolean => key === 'pending' || key.startsWith('pending-')
+
+// Gives the next number to a new turn, which takes the sources waiting for one, and forgets what was
+// expanded among them.
 const openTurn = async ($: EngineInterface, title: string, at: number) => {
   const [l, waiting] = await Promise.all([
     update($, log, (x) => {
@@ -201,11 +188,14 @@ const openTurn = async ($: EngineInterface, title: string, at: number) => {
     read($, pending),
   ])
   let taken: Entry[] = []
-  if (waiting.length > 0)
+  if (waiting.length > 0) {
     await update($, pending, (list) => {
       taken = list
       return []
     })
+    if (Object.keys(await read($, expanded)).some(isWaitingKey))
+      await update($, expanded, (map) => allSet(map, 'pending', false))
+  }
   await $.state.set(
     { plugin: 'logbook', key: 'turn', id: slotId(l.last) },
     withEntries({ index: l.last, title, startedAt: at, entries: [], dropped: 0 }, taken),
@@ -226,7 +216,7 @@ const close = async ($: EngineInterface, withLine: boolean) => {
     read($, isOff),
     read($, isDetails),
   ])
-  if (!off && kept(turn, index)) $.ui.log(summaryOf(turn.entries, details))
+  if (!off && kept(turn, index)) $.ui.log(lineOf(turn.entries, details))
 }
 
 // `/logbook on` in a turn that started with the logbook off: that turn is recorded from here on.
@@ -251,6 +241,7 @@ const clear = async ($: EngineInterface) => {
         ),
     update($, pending, () => []),
     update($, recorded, () => 0),
+    update($, expanded, () => ({})),
   ])
 }
 
@@ -263,6 +254,7 @@ const reset = ($: EngineInterface) =>
     $.state.set(RECORDED, 0),
     $.state.set(INSTRUCTIONS, {}),
     $.state.set(FOREIGN, []),
+    $.state.set(EXPANDED, {}),
     ...Array.from({ length: MAX_TURNS }, (_, i) =>
       $.state.set({ plugin: 'logbook', key: 'turn', id: slotId(i) }, null),
     ),
@@ -322,7 +314,7 @@ const noteInstructions = async ($: EngineInterface, files: readonly InstructionF
       const source: Source = {
         kind: 'instructions',
         label: shortPath(f.path) || 'instructions',
-        detail: `${clean(f.kind, 20)}${via}`,
+        detail: `${safe(f.kind, 20)}${via}`,
       }
       return entryOf(place, source, tokensOf(f.content))
     }),
@@ -362,24 +354,6 @@ const statusOf = async ($: EngineInterface, showLine: boolean): Promise<string> 
   ].join(' · ')
 }
 
-/** The subagents of a turn with the sources each used, in the order they first used one. */
-const agentsOf = (entries: readonly Entry[]) => {
-  const groups: { id: string; label: string; entries: Entry[] }[] = []
-  for (const e of entries) {
-    if (e.agentId === null) continue
-    const found = groups.find((g) => g.id === e.agentId)
-    if (found) found.entries.push(e)
-    else {
-      const spawn = entries.find((x) => isSpawn(x) && x.ref === e.agentId)
-      const label = spawn
-        ? `${spawn.label}${spawn.detail && spawn.detail !== spawn.label ? ` (${spawn.detail})` : ''}`
-        : `agent ${clean(e.agentId, 8)}`
-      groups.push({ id: e.agentId, label, entries: [e] })
-    }
-  }
-  return groups
-}
-
 export const register: Register = (on, options) => {
   const showLine = options.summary !== false
   const skillCalls: SkillCall[] = []
@@ -389,7 +363,7 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: 'logbook',
       description:
-        'Where context came from, turn by turn; `on` and `off` for this session, `pane` the timeline, `details` lists every source on the per-turn line, `clear` empties it, `help` lists these',
+        'Where context came from, turn by turn; `on` and `off` for this session, `pane` the timeline, whose groups expand to list their sources, `details` lists every source on the per-turn line, `clear` empties it, `help` lists these',
       argumentHint: '[on|off|pane|details|clear|help]',
       immediate: true,
     })
@@ -547,113 +521,27 @@ export const register: Register = (on, options) => {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
-    const isCard = e.surface !== 'terminal'
-    const card = isCard ? ({ borderStyle: 'round', borderDimColor: true, paddingX: 1 } as const) : {}
-    const [l, waiting, off, total] = await Promise.all([
+    const [l, waiting, off, total, open] = await Promise.all([
       read($, log),
       read($, pending),
       read($, isOff),
       read($, recorded),
+      read($, expanded),
     ])
-    const drawn = (await readTurns($, l.turns.slice(-MAX_DRAWN))).reverse()
-    const hidden = Math.max(0, l.turns.length - MAX_DRAWN)
-
-    const tokens = (n: number) =>
-      n > 0 ? (
-        <Box flexShrink={0}>
-          <Text dimColor>{`≈${tokensText(n)}`}</Text>
-        </Box>
-      ) : null
-
-    const row = (g: Group, key: string, indent: number) => (
-      <Box key={key} flexDirection="row" paddingLeft={indent} columnGap={1}>
-        <Box width={6} flexShrink={0}>
-          <Text color={KIND_COLOR[g.kind]}>{PANE_WORD[g.kind]}</Text>
-        </Box>
-        <Box flexShrink={0}>
-          <Text dimColor>{String(g.count)}</Text>
-        </Box>
-        <Box flexGrow={1} flexShrink={1}>
-          <Text wrap="truncate-end">{itemsText(g.items)}</Text>
-        </Box>
-        {tokens(g.tokens)}
-      </Box>
-    )
-
-    const sources = (entries: readonly Entry[], key: string) => {
-      const main = entries.filter((x) => x.agentId === null)
-      return [
-        ...groupsOf(main).map((g) => row(g, `${key}-main-${g.kind}`, 2)),
-        ...agentsOf(entries).map((a) => (
-          <Box key={`${key}-agent-${a.id}`} flexDirection="column">
-            <Box flexDirection="row" paddingLeft={2} columnGap={1}>
-              <Text color={KIND_COLOR.agent}>↳</Text>
-              <Box flexGrow={1} flexShrink={1}>
-                <Text wrap="truncate-end">{a.label}</Text>
-              </Box>
-              {tokens(sumTokens(a.entries))}
-            </Box>
-            {groupsOf(a.entries).map((g) => row(g, `${key}-${a.id}-${g.kind}`, 4))}
-          </Box>
-        )),
-      ]
+    const turns = (await readTurns($, l.turns.slice(-MAX_DRAWN))).reverse()
+    const view = {
+      turns,
+      kept: l.turns.length,
+      hidden: Math.max(0, l.turns.length - MAX_DRAWN),
+      waiting,
+      total,
+      isOff: off,
+      isCard: e.surface !== 'terminal',
+      expanded: open,
     }
-
-    const block = (t: Turn) => (
-      <Box key={`turn-${t.index}`} flexDirection="column" marginBottom={1} {...card}>
-        <Box flexDirection="row" columnGap={1}>
-          <Text color="claude" bold>{`#${t.index}`}</Text>
-          <Text dimColor>{clockOf(t.startedAt)}</Text>
-          <Box flexGrow={1} flexShrink={1}>
-            <Text bold wrap="truncate-end">
-              {t.title}
-            </Text>
-          </Box>
-          {tokens(sumTokens(t.entries.filter((x) => x.agentId === null)))}
-        </Box>
-        {t.entries.length === 0 ? (
-          <Box paddingLeft={2}>
-            <Text dimColor>no new sources</Text>
-          </Box>
-        ) : null}
-        {sources(t.entries, `t${t.index}`)}
-        {t.dropped > 0 ? (
-          <Box paddingLeft={2}>
-            <Text dimColor>{`${plural(t.dropped, 'older entry', 'older entries')} dropped`}</Text>
-          </Box>
-        ) : null}
-      </Box>
-    )
-
-    return (
-      <Box flexDirection="column">
-        <Box key="header" marginBottom={1}>
-          <Text bold wrap="truncate-end">
-            {`${plural(l.turns.length, 'turn')} · ${plural(total, 'entry', 'entries')}${off ? ' · recording off' : ''}`}
-          </Text>
-        </Box>
-        {l.turns.length === 0 && waiting.length === 0 ? (
-          <Box key="empty">
-            <Text dimColor>
-              No sources yet. Skills, MCP calls, files, web, shell, subagents and instruction files show up here, turn
-              by turn.
-            </Text>
-          </Box>
-        ) : null}
-        {waiting.length > 0 ? (
-          <Box key="pending" flexDirection="column" marginBottom={1} {...card}>
-            <Text bold>Before the next prompt</Text>
-            {sources(waiting, 'pending')}
-          </Box>
-        ) : null}
-        {drawn.map(block)}
-        {hidden > 0 ? (
-          <Box key="more">
-            <Text dimColor>{`${plural(hidden, 'earlier turn')} not shown`}</Text>
-          </Box>
-        ) : null}
-      </Box>
-    )
+    return drawPane($.ui.resolve(e), view, {
+      toggle: (key, scope) => update($, expanded, (map) => toggled(map, key, scope)).catch(() => undefined),
+      setAll: (scope, isAll) => update($, expanded, (map) => allSet(map, scope, isAll)).catch(() => undefined),
+    })
   })
 }
