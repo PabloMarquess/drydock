@@ -7,8 +7,8 @@
     "node": ">=24"
   },
   "devDependencies": {
-    "@anthropic-ai/claude-code": "2.1.310",
-    "@biomejs/biome": "2.6.3",
+    "@anthropic-ai/claude-code": "2.1.316",
+    "@biomejs/biome": "2.6.4",
     "typescript": "7.0.2"
   },
   "devEngines": {
